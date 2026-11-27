@@ -1541,7 +1541,22 @@ const IM_SLOTS=[[0,5],[5,6],[15,7],[30,8],[50,9],[75,10],[100,11],[125,12],[150,
 const IM_FLOORS=[[1,'Bonzo\'s Staff and Mask. Wear any armor the mobs drop, it scales with Catacombs.'],[2,'Only for the Red Scarf (Scarf\'s Studies line). Skip otherwise.'],[3,'First completion unlocks the Hyper Cleaver. Necromancer\'s Brooch (Necrotic reforge).'],[4,'Spirit Wings for the Spirit Sceptre, your first mage weapon.'],[5,'Shadow Assassin helmet, legs and boots (Zombie Knight chestplate until the real one). Dark Orbs for the Shaded power.'],[6,'First completion unlocks the Giant Cleaver, your main melee weapon for a long time.'],[7,'Necron (2 pieces) + Maxor boots + Wither Goggles, or Storm. Hundreds of runs for Hyperion parts, easier once you have the Spirit Mask from M4.']];
 const IM_SLAY=[['zombie','Revenant Horror',5,'Revenant Falchion and Revenant armor. Spawn in the Crypts.'],['spider','Tarantula Broodfather',2,'Tier 1 and 2 unlock Sven. Later: Tarantula armor and Tarantula silk for the Terminator.'],['wolf','Sven Packmaster',4,'Mastiff armor at level 4, then Shaman and Pooch Sword. The castle in the hub is quiet.'],['enderman','Voidgloom Seraph',4,'Final Destination armor (15k+ kills), Atomsplit Katana, Judgement Core for the Terminator.'],['blaze','Inferno Demonlord',3,'Later, for Kuudra gear and Duplex.'],['vampire','Riftstalker Bloodfiend',3,'Rift perks, low priority.']];
 const HOTM_XP=[0,3000,12000,37000,97000,197000,347000,557000,847000,1247000];
-let IMEM=null,IPROF=null,IMERR='',_imBusy=false,IMITEMS=null;
+let IMEM=null,IPROF=null,IMERR='',_imBusy=false,IMITEMS=null,_imSig='';var ALLPROF=null;
+function hashStr(s){let h=5381;for(let i=0;i<s.length;i++)h=(h*33^s.charCodeAt(i))|0;return s.length+':'+h}
+// The Ironman is a profile on the same account, so it arrives with the main profile's data. No second request, and it updates whenever the main one does.
+function imSync(){if(!ALLPROF||!S.uuid)return;if(S.imIgn&&S.imUuid&&S.imUuid!==S.uuid)return;
+  const iron=ALLPROF.filter(p=>p.game_mode==='ironman'),pick=iron.find(p=>p.selected)||iron[0];
+  if(!pick||!pick.members||!pick.members[S.uuid]){if(!IMEM){IMERR=iron.length?'':'This account has no Ironman profile.';renderIron()}return}
+  const m=pick.members[S.uuid],sg=hashStr(JSON.stringify(m));if(sg===_imSig&&IMEM)return;_imSig=sg;IPROF=pick;IMEM=m;IMERR='';
+  Promise.resolve(typeof loadReqData==='function'?loadReqData():0).catch(()=>{}).then(()=>imLoadItems(m)).then(x=>{IMITEMS=x;renderIron()}).catch(()=>renderIron())}
+// keep everything current while the page is open: re-check every 30 s, and straight away when you come back to the tab
+function autoTick(){if(document.hidden)return;try{refresh()}catch(e){}}
+setInterval(autoTick,30000);if(document.addEventListener)document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoTick()});if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('focus',autoTick);
+function imTimers(m){const out=[];try{const f=m.forge&&m.forge.forge_processes&&m.forge.forge_processes.forge_1,n=f?Object.keys(f).length:0;if(m.forge)out.push(n?`<b>Forge:</b> ${n} item${n>1?'s':''} in it`:`<b>Forge:</b> <span class="warn">empty, fill it</span>`)}catch(e){}
+  try{const cu=IPROF.community_upgrades&&IPROF.community_upgrades.currently_upgrading;if(IPROF.community_upgrades)out.push(cu&&cu.upgrade?`<b>Upgrade running:</b> ${esc(pretty(cu.upgrade))} ${roman(cu.tier||0)}`:`<b>Profile upgrade:</b> <span class="warn">nothing running, start one at Elizabeth</span>`)}catch(e){}
+  try{if(m.profile&&'cookie_buff_active' in m.profile)out.push(`<b>Booster cookie:</b> ${m.profile.cookie_buff_active?'active':'<span class="dim">not active</span>'}`)}catch(e){}
+  return out.join(' &nbsp;·&nbsp; ')}
+
 const imName=()=>S.imIgn||'Lividpandaaa'; // the Ironman is a profile on the same account
 async function imUuid(n){const k='imu_'+n.toLowerCase();if(S[k])return S[k];
   try{const j=await getJSON('https://playerdb.co/api/player/minecraft/'+encodeURIComponent(n));const u=j&&j.data&&j.data.player&&(j.data.player.raw_id||j.data.player.id);if(u){S[k]=u.replace(/-/g,'');save();return S[k]}}catch(e){}
@@ -1671,11 +1686,13 @@ function imStepState(c,s){const man=(S.imDone||{})[s[0]];if(man)return 'done';le
 function imToggle(k){S.imDone=S.imDone||{};if(S.imDone[k])delete S.imDone[k];else S.imDone[k]=1;save();renderIron()}
 function imDay(){const k='u'+Math.floor(Date.now()/864e5);if(!S.imDay||S.imDay.k!==k)S.imDay={k,d:{}};return S.imDay}
 function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');if(inp&&document.activeElement!==inp)inp.value=imName();
-  if(!IMEM){el.innerHTML=`<p class="note">${esc(IMERR||'Type your Ironman account\'s Minecraft name above and press Load. Your API key from Settings is used, the same key works for both accounts.')}</p>`;return}
+  if(!IMEM){el.innerHTML=`<p class="note">${esc(IMERR||(getKey()?'Loading your Ironman profile with your main one…':'Paste your API key in Settings. Your Ironman profile then loads with your main one and stays up to date.'))}</p>`;return}
+  const _open=[...el.querySelectorAll('details')].map(d=>d.open),_y=window.scrollY;
   const m=IMEM,c=imCtx(m),mi=imMinions(m),purse=(m.currencies&&m.currencies.coin_purse)||0,bank=IPROF.banking&&IPROF.banking.balance;
   const tile=(k,v,s)=>`<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></div>`;
   const sk=['combat','mining','farming','foraging','fishing','enchanting','alchemy','taming'].map(s=>c.sk(s)||0),avg=sk.reduce((a,b)=>a+b,0)/sk.length;
   let h=`<div class="kpis">${tile('Profile',esc(IPROF.cute_name||'?'),`SkyBlock level ${c.sbl}`)}${tile('Coins',fmt(purse),bank!=null?`plus ${fmt(bank)} in the bank`:'bank not shared')}${tile('Skill average',avg.toFixed(1),`Mining ${c.sk('mining')||0}, Combat ${c.sk('combat')||0}`)}${tile('Catacombs',c.cata.toFixed(1),`HOTM ${c.hotm||0}`)}${tile('Minion slots',mi.slots,mi.next?`${mi.next.u-mi.uniq} more unique tiers for slot ${mi.next.s}`:`${mi.uniq} unique tiers`)}${tile('Magical Power',c.mp||'?','highest reached')}</div>`;
+  {const t=imTimers(m);if(t)h+=`<p class="note">${t}</p>`}
   if(IMITEMS&&!IMITEMS.api)h+=`<p class="note">Your Ironman's inventory API is off, so gear steps can't be checked. Turn it on in SkyBlock settings (API settings) or tick them by hand.</p>`;
   // next steps: first unfinished step of each track, in track priority
   // balance: least-finished areas first, so every part of the game keeps moving instead of one skill running ahead
@@ -1697,12 +1714,13 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
   h+=`<details class="fold"><summary>Minions to craft for more slots</summary><p class="note">Every new tier counts as a unique. Good starter set: cow (leather for sacks), zombie and spider (combat sack), chicken (enchanted eggs for pets), two fishing, then aim for 12 to 14 slots. Cheapest tiers you can craft now are first.</p><div class="wrap"><table id="imCraft"></table></div></details>`;
   h+=`<details class="fold"><summary>Notes on old or changing advice</summary><p class="note">Spirit Mask now drops in Master Mode Floor 4, so older "free Spirit Mask from Bonzo" advice is out of date. Special-rarity accessories give no Magical Power since the Nov 17 update. Farming was reworked with the Greenhouse; older "farming is getting nerfed" warnings came before that. Start big grinds when a good mayor is in: Cole (Mining Fiesta, refined minerals), Jerry, Diana, or a 2x XP event.</p></details>`;
   el.innerHTML=h;
+  {const ds=el.querySelectorAll('details');if(_open.length===ds.length)ds.forEach((d,i)=>d.open=_open[i]);if($('iron')&&!$('iron').hidden&&S.tab==='iron')window.scrollTo(0,_y)}
   table($('imCraft'),[{key:'name',label:'Craft',val:r=>r.v,html:r=>`${ic(r.t+'_GENERATOR_'+r.n)}<b>${esc(r.name)}</b><span class="sub">${r.prev?'You have the tier below.':'Craft the tier below first.'}</span>`},
     {key:'rec',label:'Parts',val:r=>r.v,html:r=>Object.keys(r.rec).length?Object.entries(r.rec).map(([i,n])=>`${n}× ${esc(pretty(i))}`).join(', '):'<span class="dim">Base materials (tier I)</span>'},
     {key:'v',label:'Parts worth',val:r=>r.v,html:r=>r.v?fmt(r.v):'?',tip:'What the parts would sell for to an NPC'}],mi.opts.slice(0,30),'v','You have crafted every minion tier this page knows.');
   for(const b of el.querySelectorAll('button[data-imk]'))b.onclick=()=>imToggle(b.dataset.imk);
   for(const x of el.querySelectorAll('input[data-imday]'))x.onchange=()=>{const d=imDay();if(x.checked)d.d[x.dataset.imday]=1;else delete d.d[x.dataset.imday];save()}}
-function ironInit(){const b=$('imLoad'),i=$('imIgn');if(!b||b._w)return;b._w=1;b.onclick=()=>{S.imIgn=(i.value||'').trim();save();IMEM=null;loadIron()};i.onkeydown=e=>{if(e.key==='Enter')b.onclick()};if(imName()&&!IMEM)loadIron();else renderIron()}
+function ironInit(){const b=$('imLoad'),i=$('imIgn');if(!b||b._w)return;b._w=1;b.onclick=()=>{S.imIgn=(i.value||'').trim();save();IMEM=null;loadIron()};i.onkeydown=e=>{if(e.key==='Enter')b.onclick()};if(S.imIgn&&S.imUuid&&S.imUuid!==S.uuid&&!IMEM)loadIron();else{renderIron();imSync()}}
 
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;
@@ -1778,7 +1796,7 @@ async function loadMember(){const k=getKey();if(!k){keyMsg('No key yet. <a href=
   if(r.status===403){keyMsg('<span class="bad">Key expired or wrong.</span> <a href="https://developer.hypixel.net/dashboard" target="_blank" rel="noopener" style="color:var(--accent)">Get a new one</a>');return}
   if(r.status===429){keyMsg('<span class="warn">Rate limited, will retry</span>');return}
   if(!j.success||!j.profiles){keyMsg('<span class="bad">Hypixel returned no profiles</span>');return}
-  const pr=j.profiles.find(x=>x.profile_id===S.profile)||j.profiles.find(x=>x.selected)||j.profiles[0];PROFDATA=pr;MEMBER=pr&&pr.members&&pr.members[S.uuid]||null;stamp.member=Date.now();
+  const pr=j.profiles.find(x=>x.profile_id===S.profile)||j.profiles.find(x=>x.selected)||j.profiles[0];ALLPROF=j.profiles;PROFDATA=pr;const _nm=pr&&pr.members&&pr.members[S.uuid]||null,_sg=_nm?hashStr(JSON.stringify(_nm)):'';stamp.member=Date.now();imSync();if(_nm&&MEMBER&&_sg===window._memSig){MEMBER=_nm;keyMsg(`<span class="good">Key works</span>, profile ${esc(pr.cute_name||'')}, checked ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`);return}window._memSig=_sg;MEMBER=_nm;
   if(MEMBER){syncForge();usePurseNow();renderAll();GROWERR='';loadGrowData().then(loadInv).then(()=>loadSlotCosts()).then(()=>{if(!NEUP)GROWERR='Accessory prices did not load.';trackProfile();renderProg();renderAcc();loadPetData().then(renderProfile);renderCraft();renderHome();loadSackHist();sendDiag()}).catch(e=>{GROWERR='Item data did not load ('+((e&&e.message)||'network error')+').';renderProg()})}
   keyMsg(MEMBER?`<span class="good">Key works</span>, profile ${esc(pr.cute_name||'')}`:'<span class="warn">Key works, but your player was not in the profile</span>')}
 
@@ -2307,7 +2325,7 @@ async function refresh(force){const jobs=[],run=(k,fn)=>jobs.push(fn().then(()=>
   if(force||!CRAFT||Date.now()-stamp.craft>300000)run('craft',loadCraft);
   if(force||!PROFILE||Date.now()-stamp.profile>18e5)run('profile',loadProfile);
   if(force||!stamp.mayor||Date.now()-stamp.mayor>18e5)run('mayor',loadMayor);
-  if(getKey()&&(force||!stamp.member||Date.now()-stamp.member>12e4))run('member',loadMember);else if(!getKey())keyMsg('No key yet. <a href="https://developer.hypixel.net/dashboard" target="_blank" rel="noopener" style="color:var(--accent)">Get one</a>');
+  if(getKey()&&(force||!stamp.member||Date.now()-stamp.member>55000))run('member',loadMember);else if(!getKey())keyMsg('No key yet. <a href="https://developer.hypixel.net/dashboard" target="_blank" rel="noopener" style="color:var(--accent)">Get one</a>');
   if(jobs.length){await Promise.all(jobs);checkAlerts();renderCraft();renderCal();renderProg();renderHome();renderForge();renderStock();renderKat();renderBazaar();renderWatch();status()}}
 $('refresh').onclick=()=>refresh(true);
 if(!Array.isArray(S.active))S.active=[];if(!S.stock||typeof S.stock!=='object')S.stock={};if(!(S.rounds>=1))S.rounds=1;if(!S.v2){S.v2=1;S.slots=7;S.qf=30;S.bztax=1.25;$('slots').value=7;$('qf').value=30;$('bztax').value=1.25;save()}if(!Array.isArray(S.log))S.log=[];if(!S.v3){S.v3=1;if(S.minprofit>=1e6){S.minprofit=5e5;$('minprofit').value='500k'}save()}if(!(S.rate>=0)||S.rate==null){S.rate=57e6;$('rate').value='57.0m';save()}if(!(S.mincraft>0)){S.mincraft=3e6;$('mincraft').value='3.0m';save()}if(!(S.bidwin>0)||S.bidwin===45)S.bidwin=90;if(!(S.maxage>0)){S.maxage=60;$('maxage').value=60;save()}if(!(S.holdcap>0)){S.holdcap=25e6;$('holdcap').value='25.0m';save()}

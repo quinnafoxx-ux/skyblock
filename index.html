@@ -482,7 +482,7 @@ nav button{font-size:15px}
   </section>
   <section id="prog">
     <details class="how"><summary><span>What to do, buy and upgrade next to grow your profile, built from your own gear and live prices.</span></summary><p>Reads your profile with your API key: dungeon progress, accessory bag, armor, weapons and purse. "Your next moves" is the short list in order, and the shopping list under it is everything that costs coins, in buying order, checked against your purse. The Magical Power plan picks the cheapest point of Magical Power each step, whether that is buying a missing accessory, upgrading one in the same family, or recombobulating one you own, using current lowest prices. The gear check compares your Terminator and armor against what Master Mode parties expect for the floor you are working toward. Enchant and reforge targets come from 2026 forum guides for a Terminator Berserk. Dungeon targets are what party finder groups ask for (Catacombs 38 for M5, 44 for M6, about 45 for M7), which is above what the game needs to let you in. Magical Power counts only your accessory bag, with the Nov 17 2026 rules (Special accessories give none). Prices move, so treat costs as a guide and check the item in game before you pay.</p></details>
-    <div id="progHead"></div><div id="growMoves"></div>
+    <div id="progHead"></div><div id="growMoves"></div><div id="forageCard"></div>
     <h3>Best upgrade for your coins</h3><p class="note" id="bestNote"></p><div class="wrap"><table id="bestT"></table></div>
     <details class="fold"><summary>Shopping list against your purse</summary><p class="note" id="shopNote"></p><div class="wrap"><table id="shopT"></table></div></details>
     <details class="fold"><summary>Is it worth your time?</summary><p class="note" id="doNote"></p><div class="wrap"><table id="doT"></table></div></details>
@@ -1024,7 +1024,10 @@ async function loadAttrs(){if(ATTRS)return;try{const j=await getJSON('https://ra
 const accReqText=it=>(it.requirements||[]).map(q=>q.type==='SLAYER'?`${pretty(q.slayer_boss_type||'')} Slayer ${q.level}`:q.type==='SKILL'?`${pretty(q.skill||'')} ${q.level}`:q.type==='DUNGEON_TIER'?`${pretty(q.dungeon_type||'Catacombs')} floor ${q.tier}`:q.type==='DUNGEON_SKILL'?`Catacombs ${q.level}`:q.type==='HEART_OF_THE_MOUNTAIN'?`Heart of the Mountain ${q.tier}`:q.type==='COLLECTION'?`${pretty(q.collection||'')} collection ${q.tier}`:pretty(q.type||'a requirement')).join(', ');
 const heg=id=>id==='HEGEMONY_ARTIFACT'?2:1;
 // the cheapest way to add one bag slot right now: a Jacobus upgrade (2 slots, 10M at most) or the next Accessory Size level
-function slotCost(){const a=attrRow('Accessory Size');let best=5e6,how='a Jacobus upgrade';if(a&&a.nextCost>0&&a.nextCost<best){best=a.nextCost;how='the next Accessory Size level'}return {c:best,how}}
+// Jacobus sells 2 slots a purchase; price by how many you have bought (wiki table): 1st 1.5M, 2-5 5M, 6-10 8M, 11-20 12M, 21-99 20M
+function jacCost(n){return n<1?1.5e6:n<5?5e6:n<10?8e6:n<20?12e6:n<99?20e6:Infinity}
+var RECOMB={}; // cheapest already-recombobulated listing per item, filled by the Auctions scan
+function slotCost(){const a=attrRow('Accessory Size'),j=MEMBER&&MEMBER.accessory_bag_storage?MEMBER.accessory_bag_storage.bag_upgrades_purchased:null;let best=j!=null?jacCost(j)/2:5e6,how=j!=null?`Jacobus upgrade ${j+1} (${fmt(jacCost(j))} for 2 slots)`:'a Jacobus upgrade';if(a&&a.nextCost>0&&a.nextCost<best){best=a.nextCost;how='the next Accessory Size level'}return {c:best,how}}
 // every accessory you could still add, plus every recombobulation, with what it gives and what it costs
 function accRows(){if(!ITEMSRAW)return null;const st=accState(),trust=st?accTrust(st):{ok:false},known=!!(st&&trust.ok),have={},rows=[];
   if(known)for(const id in st.active)have[id]=st.active[id].r;
@@ -1042,6 +1045,7 @@ function accRows(){if(!ITEMSRAW)return null;const st=accState(),trust=st?accTrus
     r.per=r.cost!=null&&r.cost>0?r.cost/gain:r.cost===0?0:null;rows.push(r)}
   if(known&&rc>0)for(const id in have){if(st.active[id].recomb||!RUP[have[id]])continue;const db=ITEMDB[id];if(db&&db.can_recombobulate===false)continue;
     const gain=heg(id)*(MPV[RUP[have[id]]]-MPV[have[id]]);if(gain<=0)continue;rows.push({id,name:st.active[id].name,rarity:RUP[have[id]],from:have[id],gain,g:'recomb',cost:rc,per:rc/gain,how:`Recombobulate the one in your bag from ${pretty(have[id])} to ${pretty(RUP[have[id]])}. Needs no new slot.`,req:'',upg:true})}
+  {const rcb=BZ?askFor('RECOMBOBULATOR_3000',1)||0:0;if(rcb>0)for(const r of rows){const rb=RECOMB[r.id];if(rb&&r.g==='buy'&&r.cost>0&&rb<r.cost+rcb)r.how=(r.how?r.how+' ':'')+`One already recombobulated is listed at ${fmt(rb)}, cheaper than this plus a Recombobulator (${fmt(r.cost+rcb)}). Search the Auction House for it.`}}
   // one row per upgrade line: the top version, unless each extra Magical Power over the next one down costs over 3x the going rate and over 2.5M
   {const root=id=>{const s=new Set([id]);let grew=1;while(grew){grew=0;for(const k of [...s])for(const j of accBelow(k).concat(accAbove(k)))if(!s.has(j)){s.add(j);grew=1}}return [...s].sort().join(',')};
     const pers=rows.filter(r=>(r.g==='buy'||r.g==='craft')&&r.per>0).map(r=>r.per).sort((a,b)=>a-b),med=pers.length?pers[pers.length>>1]:Infinity,fam={};
@@ -1722,6 +1726,14 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
   for(const x of el.querySelectorAll('input[data-imday]'))x.onchange=()=>{const d=imDay();if(x.checked)d.d[x.dataset.imday]=1;else delete d.d[x.dataset.imday];save()}}
 function ironInit(){const b=$('imLoad'),i=$('imIgn');if(!b||b._w)return;b._w=1;b.onclick=()=>{S.imIgn=(i.value||'').trim();save();IMEM=null;loadIron()};i.onkeydown=e=>{if(e.key==='Enter')b.onclick()};if(S.imIgn&&S.imUuid&&S.imUuid!==S.uuid&&!IMEM)loadIron();else{renderIron();imSync()}}
 
+/* ---------- main account: is foraging worth more than your current rate? ---------- */
+// Guide makers report 150 Figstone an hour at a practised pace (200 at the top), plus about 7M an hour in essence and side drops.
+function renderForage(){const el=$('forageCard');if(!el)return;if(!BZ||!MEMBER){el.innerHTML='';return}
+  const id=Object.keys(BZ).find(k=>/^FIG_?STONE$/.test(k))||Object.keys(BZ).find(k=>/FIG_?STONE/.test(k)&&!/SHARD|ARMOR|AXE/.test(k));if(!id){el.innerHTML='';return}
+  const px=bid(id)||0;if(!(px>0)){el.innerHTML='';return}const rate=150*px*(1-bzTax())+7e6,x=MEMBER.player_data&&MEMBER.player_data.experience,t=SKILLXP&&SKILLXP.foraging;let lv=null;if(x&&t){lv=0;const xp=x.SKILL_FORAGING||0;for(const n of t){if(xp>=n)lv++;else break}}
+  const mine=S.rate||0,better=rate>mine*1.15,need=lv!=null&&lv<15;
+  el.innerHTML=`<div class="card"><h2>Foraging check</h2><p>${better?`<b class="good">Fig foraging could beat your rate.</b>`:`<b>Fig foraging does not beat your rate right now.</b>`} At today's Figstone price (${fmt(px)} to a buy order) a practised 150 an hour is about <b>${fmt(rate)}</b> an hour, against your ${fmt(mine)}.</p><p class="note">${lv!=null?`You are Foraging ${lv}. `:''}${need?`Fig armor needs Foraging 15, so this is ${15-lv} levels away. `:''}Needs Fig armor (about 6M) and a Figstone Splitter. The 150 an hour is what guide makers report, not measured on you; expect less while learning the route.</p></div>`}
+
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;
 async function loadSlotCosts(){if(SLOTCOST)return;try{const items=await loadItemsRaw(),m={};for(const it of items){const gs=it.gemstone_slots;if(!gs||!gs.some(x=>x.costs&&x.costs.length))continue;const o={},cnt={};for(const x of gs){const idx=cnt[x.slot_type]||0;cnt[x.slot_type]=idx+1;if(x.costs&&x.costs.length)o[x.slot_type+'_'+idx]=x.costs}m[it.id]=o}SLOTCOST=m}catch(e){}}
@@ -2104,11 +2116,11 @@ async function scan(quick){quick=quick===true&&!!AH&&!!AH.fullAt&&Date.now()-AH.
     const handle=async pg=>{let newest=0;for(const a of pg.auctions)if(a.start>newest)newest=a.start;if(newest&&newest<covered)covered=newest; // pages run newest first, so everything listed after this point is on the pages we read
       const bins=pg.auctions.filter(a=>a.bin&&!a.claimed);
       for(let i=0;i<bins.length;i+=250){await Promise.all(bins.slice(i,i+250).map(async a=>{try{
-        const d=await decodeItem(a.item_bytes),ea=d.ea;if(!ea.id||d.count>1||SKIP.has(ea.id)||ea.winning_bid)return;
+        const d=await decodeItem(a.item_bytes),ea=d.ea;if(ea.id&&ea.rarity_upgrades>0&&(!RECOMB[ea.id]||a.starting_bid<RECOMB[ea.id]))RECOMB[ea.id]=a.starting_bid;if(!ea.id||d.count>1||SKIP.has(ea.id)||ea.winning_bid)return;
         const name=strip(a.item_name),up=upgrades(ea,name),lore=a.item_lore||'',dungeon=/DUNGEON/.test(lore.slice(lore.lastIndexOf('\n')+1));
         items.push({seller:a.auctioneer,uuid:a.uuid,name,id:ea.id,price:a.starting_bid,start:a.start,up,dg:dungeon,key:variantKey(ea,dungeon),nEnch:Object.keys(ea.enchantments||{}).length,ench:ea.enchantments})}catch(e){}}))}
       const tNow=Date.now(),soon=pg.auctions.filter(a=>!a.bin&&!a.claimed&&a.end-tNow>30000&&a.end-tNow<(S.bidwin||90)*6e4);
-      await Promise.all(soon.map(async a=>{try{const d=await decodeItem(a.item_bytes),ea=d.ea;if(!ea.id||d.count>1||SKIP.has(ea.id)||ea.id==='ENCHANTED_BOOK')return;
+      await Promise.all(soon.map(async a=>{try{const d=await decodeItem(a.item_bytes),ea=d.ea;if(ea.id&&ea.rarity_upgrades>0&&(!RECOMB[ea.id]||a.starting_bid<RECOMB[ea.id]))RECOMB[ea.id]=a.starting_bid;if(!ea.id||d.count>1||SKIP.has(ea.id)||ea.id==='ENCHANTED_BOOK')return;
         const name=strip(a.item_name),lore=a.item_lore||'',dungeon=/DUNGEON/.test(lore.slice(lore.lastIndexOf('\n')+1));
         ending.push({uuid:a.uuid,name,id:ea.id,bid:a.highest_bid_amount||0,start0:a.starting_bid,nb:(a.bids||[]).length,end:a.end,up:upgrades(ea,name),dg:dungeon,key:variantKey(ea,dungeon)})}catch(e){}}));
       done++;fill.style.width=(done/pages*100)+'%';$('scanMsg').textContent=`Reading page ${done} of ${pages}`};
@@ -2317,7 +2329,7 @@ function renderHome(){const card=(title,tab,body)=>`<div class="card"><h2>${titl
 /* ---------- refresh loop ---------- */
 function status(){const t=(k,n)=>ERR[k]?`<span class="st err"><i></i>${n} failed</span>`:stamp[k]?`<span class="st ok" title="Last loaded"><i></i>${n} ${new Date(stamp[k]).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>`:`<span class="st"><i></i>${n} not loaded</span>`;
   $('status').innerHTML=(purse()!=null?`<span class="st ok" id="usePurse" style="cursor:pointer" title="Coins to spend follows your purse. If you typed your own number, click here to go back to the purse. Bank coins are never counted."><i></i>Purse ${fmt(purse())}${S.autob!==false?'':', click to use'}${bankBal()!=null?', bank '+fmt(bankBal()):''}</span>`:'')+t('bz','Bazaar')+t('forge','Forge')+t('kat','Kat')+t('ah','Auctions')+(MAYOR?`<span class="st${TAXX>1?' alert':''}">Mayor ${esc(MAYOR)}${TAXX>1?', taxes ×4':''}</span>`:'');tabBadges();const up=$('usePurse');if(up)up.onclick=()=>{S.autob=true;usePurseNow();renderAll()}}
-function renderAll(){applyCheckin();accInit();ironInit();renderDay();renderFuse();renderProfile();renderCraft();renderCal();renderProg();renderAcc();renderHome();renderForge();renderStock();renderLog();renderKat();renderBazaar();renderWatch();if(AH)evalAuctions();else renderAH();status();applyTabs()}
+function renderAll(){applyCheckin();accInit();ironInit();renderForage();renderDay();renderFuse();renderProfile();renderCraft();renderCal();renderProg();renderAcc();renderHome();renderForge();renderStock();renderLog();renderKat();renderBazaar();renderWatch();if(AH)evalAuctions();else renderAH();status();applyTabs()}
 async function refresh(force){const jobs=[],run=(k,fn)=>jobs.push(fn().then(()=>{delete ERR[k]}).catch(e=>{ERR[k]=e.message;console.warn(e)}));
   if(force||!BZ||Date.now()-stamp.bz>30000)run('bz',loadBazaar);
   if(force||!FORGE||Date.now()-stamp.forge>300000)run('forge',loadForge);

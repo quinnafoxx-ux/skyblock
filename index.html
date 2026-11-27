@@ -448,11 +448,68 @@ button.chipb.on{background:var(--goldbg);color:var(--gold);border-color:var(--go
 .dayrow .sub{display:none}.dayrow .sub.open,.dayrow.open .sub{display:block}
 .dayrow b{cursor:pointer}.dayrow:not(.open) b::after{content:" ›";color:var(--faint);font-weight:400}
 .dayrow .sub{display:none!important}.dayrow.open .sub{display:block!important}
+/* ===== game-like pass: inventory panels, item slots, XP bars, square ticks ===== */
+:root{--xp:#7FD43F;--xpdim:#2B3A1E;--slot:#1E2328;--bevl:#2E353D;--bevd:#0A0C0E}
+.card,details.fold,.imchip{border-radius:4px;border:1px solid var(--line);box-shadow:inset 1px 1px 0 var(--bevl),inset -1px -1px 0 var(--bevd)}
+/* item slot next to each step: the bold element */
+.imslot{flex:0 0 34px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--slot);border:2px solid;border-color:var(--bevd) var(--bevl) var(--bevl) var(--bevd);border-radius:2px}
+.imslot img.ic{width:24px;height:24px;margin:0;image-rendering:pixelated}
+.imr.done .imslot{opacity:.45}
+/* square tick, like an empty slot that fills green */
+button.imc{border-radius:3px;flex:0 0 22px;width:22px;height:22px;min-height:22px;margin-top:6px;border:2px solid var(--line2);font-size:13px}
+.imr.done button.imc{background:var(--xpdim);border-color:var(--xp);color:var(--xp)}
+.dayrow input{appearance:none;-webkit-appearance:none;width:20px;height:20px;border:2px solid var(--line2);border-radius:3px;background:none;display:grid;place-items:center;cursor:pointer}
+.dayrow input:checked{background:var(--xpdim);border-color:var(--xp)}.dayrow input:checked::after{content:"✓";color:var(--xp);font-size:13px;font-weight:700;line-height:1}
+/* XP bars: segmented green, like the experience bar */
+.imarea .imbar{height:8px;background:var(--xpdim);border:1px solid var(--bevd);border-radius:1px}
+.imarea .imbar i{background:var(--xp);background-image:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(0,0,0,.35) calc(10% - 1px) 10%);transition:width .5s ease-out}
+.imarea .p{font:700 12px var(--mono);color:var(--xp)}
+/* header numbers as inventory slots */
+.imchip{background:var(--slot)}.imchip b{color:var(--gold)}
+/* daily chips: small slots that light up */
+button.chipb{border-radius:3px;border:1px solid var(--line2);box-shadow:inset 1px 1px 0 var(--bevl)}
+button.chipb.on{background:var(--xpdim);color:var(--xp);border-color:var(--xp)}
+/* tags in pixel type, tiny and muted */
+.imr .tag,.steps .tag{font:400 9px/1.6 "Silkscreen",ui-monospace,monospace;letter-spacing:.02em;text-transform:lowercase;background:var(--slot);border:1px solid var(--line2);border-radius:2px;padding:1px 5px;color:var(--dim)}
+/* one motion: opening an area slides its steps in */
+.imarea[open] .imr{animation:imin .18s ease-out both}
+@keyframes imin{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.imr .imt:hover .tt{color:var(--gold)}
+@media(prefers-reduced-motion:reduce){.imarea[open] .imr{animation:none}.imarea .imbar i{transition:none}}
+.imslot:empty,.imslot:has(img[style*="none"]){display:none}
+/* events */
+.sbev{display:grid;gap:0}.sbe{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}.sbe:first-child{border-top:0}
+.sbe span{color:var(--dim);font:500 13px var(--mono);white-space:nowrap}.sbe.live b{color:var(--xp)}.sbe.live span{color:var(--xp)}
+/* phones: any table wider than the screen scrolls inside its card instead of running off the edge */
+@media(max-width:720px){main table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}}
+/* logo: pixel coin replaces the flat square */
+h1:before{display:none!important}h1 .logo{flex:none;margin-right:10px;image-rendering:pixelated;vertical-align:middle}h1{display:flex;align-items:center}
+nav .navmore{display:none}
+@media(max-width:720px){
+  header h1{display:none}
+  nav button[id^="tab_"]:not(#tab_home,#tab_day,#tab_forge,#tab_fuse,#tab_iron){display:none}
+  nav .navmore{display:flex;order:99;flex:1 0 auto}
+  nav button[id^="tab_"]{flex:1 0 auto;min-width:0}
+  nav .navmore .dots{font-size:22px;line-height:23px;height:23px}
+  nav.open{flex-wrap:wrap;max-height:75vh;overflow-y:auto;box-shadow:0 -12px 30px rgba(0,0,0,.6);padding-top:8px}
+  nav.open button[id^="tab_"]:not(.tabhid){display:flex!important;flex:0 0 25%}
+  nav.open button.tabhid{display:none!important}
+  nav.open .navmore{order:-1}
+  nav.open .navmore{flex:0 0 25%}
+  nav button.navmore.on{border-top:3px solid var(--gold);color:var(--gold)}
+  /* Ironman tab: the main account's coins, check-in and market status don't apply */
+  body[data-tab="iron"] header>label,body[data-tab="iron"] #checkLbl,body[data-tab="iron"] #status{display:none!important}
+}
+/* tick feedback */
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.imr.done button.imc,.dayrow input:checked,button.chipb.on{animation:pop .22s ease-out}
+.imstreak{font-size:13px;color:var(--dim);margin:12px 0 6px}.imstreak b{color:var(--gold)}
+@media(prefers-reduced-motion:reduce){.imr.done button.imc,.dayrow input:checked,button.chipb.on{animation:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>SkyBlock Flipper</h1>
+  <h1><svg class="logo" viewBox="0 0 8 8" width="28" height="28" shape-rendering="crispEdges" aria-hidden="true"><path fill="#7a4a00" d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1z"/><path fill="#FFB62E" d="M2 1h4v1h1v4H6v1H2V6H1V2h1z"/><path fill="#FFE08A" d="M2 2h2v1H3v1H2z"/><path fill="#b87400" d="M4 3h1v2H4z"/></svg>SkyBlock Flipper</h1>
   <label><span id="budgetLbl">Coins to spend</span><input id="budget" placeholder="e.g. 50m"></label>
   <input id="checkin" type="hidden"><span class="dim" id="checkLbl" style="align-self:center;font-size:14px" title="Plans assume you check the forge at 8 AM and 11 PM"></span>
   <button id="gear">Settings</button>
@@ -636,7 +693,7 @@ function checkAlerts(){let ch=false;const now=Date.now();
 
 /* ---------- tabs ---------- */
 const TABS=[['home','Overview'],['day','Daily'],['prog','Grow'],['profile','Profile'],['iron','Ironman'],['acc','Accessories'],['forge','Forge'],['fuse','Fusion'],['stock','Stock'],['auctions','Auctions'],['craft','AH Craft'],['bazaar','Bazaar'],['kat','Kat pets'],['cal','Timing'],['watch','Watchlist'],['log','Profit log']],MAINTABS=9;
-function showTab(t){S.tab=t;save();for(const [id] of TABS){$(id).classList.toggle('on',id===t);$('tab_'+id).classList.toggle('on',id===t)}if(window.scrollTo)window.scrollTo(0,0)}
+function showTab(t){S.tab=t;save();if(document.body)document.body.dataset.tab=t;if(typeof navClose==='function')navClose();for(const [id] of TABS){$(id).classList.toggle('on',id===t);$('tab_'+id).classList.toggle('on',id===t)}if(window.scrollTo)window.scrollTo(0,0)}
 $('tabs').innerHTML=TABS.map(([id,n],i)=>`${i===MAINTABS?'<span class="navsep"></span>':''}<button id="tab_${id}"${i>=MAINTABS?' class="minor"':''}>${n}<span id="bdg_${id}"></span></button>`).join('');
 function tabBadges(){let rdy=0,hits=0,found=0;try{const now=Date.now();rdy=S.active.filter(a=>a.end<=now).length;hits=BZ?S.watch.filter(w=>{const b=bid(w.id);return w.target&&b>0&&b<=w.target}).length:0;found=AH&&AH.found?AH.found.length:0}catch(e){}
   const set=(id,n,q)=>{const e=$('bdg_'+id);if(e){e.className=n?'badge'+(q?' q':''):'';e.textContent=n||''}};
@@ -1263,6 +1320,8 @@ function accCraft(id){const key=Object.values(stamp||{}).join()+'|'+(Array.isArr
   return _acm[id]=out}
 // lowest way to get one: the cheapest listing or crafting it from Bazaar materials
 const accGet=id=>{const p=NEUP&&NEUP[id]>0?NEUP[id]:0,c=accCraft(id);return c&&(!p||c.c<p)?{c:c.c,how:'craft'}:p?{c:p,how:'buy'}:null};
+// the SkyBlock day rolls over at midnight UTC: 4 PM Pacific in winter, 5 PM in summer
+const RESET=()=>{const d=new Date();d.setUTCHours(24,0,0,0);return d.toLocaleTimeString([],{hour:'numeric'})};
 
 /* ---------- Daily tab: what to do when you first log on ---------- */
 // Two kinds of row: things that move your account forward (always listed), and coin tasks, which are only listed when they beat your hourly rate.
@@ -1274,10 +1333,10 @@ function dayRows(){const st=dayState(),rows=[],now=Date.now(),pc=typeof cataPace
   add('forge','First, from your menus','Collect and refill your forge',FORGE&&BZ?(ready?`${ready} finished. `:'')+(empty?`${empty} empty slot${empty===1?'':'s'}. `:'')+(!ready&&!empty?'Nothing to collect yet. ':'')+'The Forge tab has what to start.':'The Forge tab has what to start.',MEMBER?(!ready&&!empty):null,{tab:'forge'});
   add('ah','First, from your menus','Claim sold auctions and fusion shards','Claim coins from forge items that sold on the Auction House, collect filled fusion orders, fuse and list. Then place the next fusion orders.',null,{tab:'fuse'});
   // progress: first-of-the-day bonuses
-  add('cata','First bonuses of the day','Catacombs: your first 5 runs',`The first 5 runs each day give 40% more Catacombs XP. They reset at 4 PM Pacific. ${pc&&pc.today!=null?`Hypixel shows ${Math.min(pc.today,99)} run${pc.today===1?'':'s'} today.`:'Do them before anything else in dungeons.'}`,pc&&pc.today!=null?pc.today>=5:null);
+  add('cata','First bonuses of the day','Catacombs: your first 5 runs',`Your first runs each day carry bonus Catacombs XP. They reset at ${RESET()}. ${pc&&pc.today!=null?`Hypixel shows ${Math.min(pc.today,99)} run${pc.today===1?'':'s'} today.`:'Do them before anything else in dungeons.'}`,pc&&pc.today!=null?pc.today>=5:null);
   add('forage','First bonuses of the day','Foraging: your first bonus of the day','You told me the first foraging of the day carries a bonus. I could not confirm the numbers, so check the reward in game and edit this if it is wrong.',null);
   add('agatha','First bonuses of the day',"Agatha's daily contest on Galatea",'Agatha rewards you once a day for taking part, including Heart of the Forest XP.',null);
-  {const t=S.cube||0,left=t+72e5-now;add('cube','First bonuses of the day',"Ubik's Cube in the Rift",`Split or Steal every 2 hours for motes, which buy Shen's auction items. ${t?(left<=0?'Ready now.':'Ready in '+timeLeft(left)+'.'):''}`,t?left>0:null,{cube:true})}
+  {const t=S.cube||0,left=t+72e5-now;add('cube','Every 2 hours',"Ubik's Cube in the Rift",`Split or Steal every 2 hours for motes, which buy Shen's auction items. ${t?(left<=0?'Ready now.':'Ready in '+timeLeft(left)+'.'):''}`,t?left>0:null,{cube:true})}
   // coins: only what beats your rate
   const dr=typeof dailyRows==='function'?dailyRows():[],keep=dr.filter(r=>r.good),drop=dr.filter(r=>!r.good);
   for(const r of keep)add('m_'+r.id,'Coins that beat your mining',r.name,r.note+` About ${r.mins} minutes.`,null,{pays:r.pays,live:r.live,vs:r.vs});
@@ -1285,7 +1344,7 @@ function dayRows(){const st=dayState(),rows=[],now=Date.now(),pc=typeof cataPace
   for(const r of rows)r.done=r.auto===true||!!st.done[r.id];
   return {rows,drop}}
 function renderDay(){const el=$('dayList');if(!el)return;const st=dayState(),d=dayRows(),left=d.rows.filter(r=>!r.done).length;
-  $('dayHead').innerHTML=`<div class="plan"><div class="head"><span class="k">Today</span><span class="v">${left?left+' left':'All done'}</span></div>${left?'':'Everything is ticked. Go mine.'} Ticks clear when the game's day rolls over, at 4 PM Pacific (midnight UTC), the same moment your 5 bonus runs reset.</div>`;
+  $('dayHead').innerHTML=`<div class="plan"><div class="head"><span class="k">Today</span><span class="v">${left?left+' left':'All done'}</span></div>${left?'':'Everything is ticked. Go mine.'} Resets at ${RESET()}.</div>`;
   let html='',g='';for(const r of d.rows){if(r.group!==g){g=r.group;html+=`<h3 style="margin:16px 0 6px">${esc(g)}</h3>`}
     html+=`<label class="dayrow${r.done?' done':''}"><input type="checkbox" data-d="${esc(r.id)}"${r.done?' checked':''}${r.auto===true?' disabled':''}><span class="t"><b>${esc(r.name)}</b>${r.pays?` <span class="good">${fmt(r.pays)}</span><span class="dim"> ${r.live?'live price':'claimed'}, +${fmt(r.vs)} after your time</span>`:''}<span class="sub">${esc(r.note)}${r.auto===true?' Ticked by the page.':''}</span></span>${r.tab?`<button data-tab="${r.tab}">Open</button>`:''}${r.cube?`<button data-cube>I just did it</button>`:''}${r.custom?`<button data-rm="${esc(r.custom)}" title="Remove">Remove</button>`:''}</label>`}
   el.innerHTML=html;
@@ -1303,7 +1362,7 @@ function tabWorth(id){if(S.alltabs)return true;try{
     if(id==='watch')return (S.watch||[]).length>0;
     if(id==='log')return (S.log||[]).length>0}catch(e){return true}
   return true}
-function applyTabs(){const hidden=[];{const c=$('alltabs');if(c)c.checked=!!S.alltabs;const f=$('forgeOnly');if(f)f.checked=!!S.forgeOnly}for(const [id,n] of TABS){const b=$('tab_'+id);if(!b)continue;const ok=tabWorth(id);b.style.display=ok?'':'none';if(!ok)hidden.push(n)}
+function applyTabs(){const hidden=[];{const c=$('alltabs');if(c)c.checked=!!S.alltabs;const f=$('forgeOnly');if(f)f.checked=!!S.forgeOnly}for(const [id,n] of TABS){const b=$('tab_'+id);if(!b)continue;const ok=tabWorth(id);b.style.display=ok?'':'none';b.classList.toggle('tabhid',!ok);if(!ok)hidden.push(n)}
   if(!tabWorth(S.tab))showTab('home');const el=$('hidTabs');if(el)el.textContent=hidden.length?`Hidden because nothing in them is worth your time right now: ${hidden.join(', ')}. They come back on their own when that changes.`:''}
 
 /* ---------- check-ins: you look at the forge at 8 AM and 11 PM ---------- */
@@ -1667,7 +1726,7 @@ const IM_TRACKS=[
   ['sa','Shadow Assassin set from F5','Helmet, legs, boots, with a Zombie Knight chestplate. Skip grinding Dragon armor, F5 replaces it fast.',c=>c.has(/Shadow Assassin/)],
   ['giant','Complete F6: Giant Cleaver','5M plus your Hyper Cleaver at Ophelia. Main melee weapon for a long time.',c=>c.has(/Giant Cleaver/)],
   ['shards','Barbarian Duke, Power Dragon, Burning Soul, Shellwise shards','+25% melee, +30% to bosses, attack speed, knockback immunity. Keep Strength and Crit Damage about 1:1.',null],
-  ['gdrag','Golden Dragon (around 1,100 Magical Power)','Biggest damage multiplier; scales with your bank. Dragon\'s Lair in the Crystal Hollows.',c=>c.pet('GOLDEN_DRAGON')],
+  ['gdrag','Golden Dragon (late game)','Biggest damage multiplier; scales with your bank. Dragon\'s Lair in the Crystal Hollows.',c=>c.pet('GOLDEN_DRAGON')],
   ['term','Terminator, then Master Mode','M4 drops the Spirit Mask now (recent hub update), which makes the F7 Hyperion grind survivable.',c=>c.has(/Terminator/)],
  ]],
  ['farming','Farming and garden (strong late money)',[
@@ -1705,7 +1764,7 @@ const IM_TRACKS=[
   ['hideon','Hideonring shard: +10 accessory slots','48 shards to max.',null],
  ]],
 ];
-const IM_MONEY=[['Experiments','~300k a day','Enchanting 10+, three a day, free',c=>c.sk('enchanting')>=10],
+const IM_MONEY=[['Experiments','XP + books','Enchanting 10+, three a day, free',c=>c.sk('enchanting')>=10],
  ['Galatea contests','~300k an hour','Any time, one sweet berry patch a contest',c=>true],
  ['Shiny blocks + Endermen in the End','4-5M an hour','Combat 12, also combat XP',c=>c.sk('combat')>=12],
  ['Myriad contest + honeycomb mobs','~4M an hour','Heart of the Forest 4, behemoth lasso from Galatea',c=>null],
@@ -1724,6 +1783,13 @@ function imMinions(m){const cg=(m.player_data&&m.player_data.crafted_generators)
   const opts=[];for(const t in IM_MIN){const T=IM_MIN[t];for(let n=1;n<=11;n++){if(tiers[t]&&tiers[t].has(n))continue;if(!T[n])break;const rec=T[n][1];let v=0;for(const i in rec)v+=npc(i)*rec[i];
       const prev=n===1||(tiers[t]&&tiers[t].has(n-1));opts.push({t,n,rec,v,prev,name:pretty(t)+' Minion '+roman(n)});break}}
   opts.sort((a,b)=>(b.prev-a.prev)||(a.v-b.v));return {uniq,slots,next,opts}}
+const IM_ICON={cookie:'BOOSTER_COOKIE',grandma:'PET_GRANDMA_WOLF',slotupg:'COBBLESTONE_GENERATOR_1',m12:'SAND',dwarven:'MITHRIL_ORE',ench10:'EXPERIMENTATION_TABLE',alch10:'BREWING_STAND_ITEM',sacks:'SMALL_MINING_SACK',
+ hotm3:'MITHRIL_ORE',golem:'PET_MITHRIL_GOLEM',mpick:'MITHRIL_PICKAXE',glacite:'GLACITE_CHESTPLATE',comp:'PERSONAL_COMPACTOR_4000',meq:'MITHRIL_BELT',hotm4:'JUNGLE_PICKAXE',d226:'MITHRIL_DRILL_1',pigeon:'ROYAL_PIGEON',yog:'FLAME_BREAKER_CHESTPLATE',tdrill:'TITANIUM_DRILL_1',events:'GOBLIN_EGG',
+ cleaver:'CLEAVER',c15:'GLACITE_HELMET',super:'SUPER_CLEAVER',aote:'ASPECT_OF_THE_END',silky:'LUXURIOUS_SPOOL',hyper:'HYPER_CLEAVER',mastiff:'MASTIFF_CHESTPLATE',spirit:'BAT_WAND',sa:'SHADOW_ASSASSIN_CHESTPLATE',giant:'GIANT_CLEAVER',shards:'HUNTING_TOOLKIT',gdrag:'PET_GOLDEN_DRAGON',term:'TERMINATOR',
+ hoe:'ADVANCED_GARDENING_HOE',compost:'COMPOST',elephant:'PET_ELEPHANT',melon:'MELON_CHESTPLATE',lotus:'LOTUS_NECKLACE',cropie:'CROPIE_CHESTPLATE',green:'MELON',ferm:'FERMENTO_CHESTPLATE',
+ treecap:'TREECAPITATOR_AXE',ocelot:'PET_OCELOT',contests:'SWEET_AXE',david:'DAVIDS_CLOAK',fig:'FIG_CHESTPLATE',shard1:'ENTANGLER_LASSO',helix:'HELIX_ARMOR_CHESTPLATE',
+ fmin:'FISHING_GENERATOR_1',bayou:'FISHING_ROD',back:'PET_HERMIT_CRAB',junk:'JUNK_ARTIFACT',shark:'DULL_SHARK_TOOTH_NECKLACE',rod:'CHAMP_ROD',
+ slots:'REDSTONE',merchant:'VACCINE_TALISMAN',quest:'ENCHANTED_BOOK',spooky:'PET_BAT',hideon:'LARGE_POCKET_BLACK_HOLE',minslot:'COBBLESTONE_GENERATOR_2'};
 function imStepState(c,s){const man=(S.imDone||{})[s[0]];if(man)return 'done';let v=null;try{v=s[3]?s[3](c):null}catch(e){v=null}return v===true?'done':v===false?'todo':'unk'}
 function imToggle(k){S.imDone=S.imDone||{};if(S.imDone[k])delete S.imDone[k];else S.imDone[k]=1;save();renderIron()}
 function imDay(){const k='u'+Math.floor(Date.now()/864e5);if(!S.imDay||S.imDay.k!==k)S.imDay={k,d:{}};return S.imDay}
@@ -1735,19 +1801,19 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
   {const r=$('imIgn');if(r&&r.parentElement)r.parentElement.style.display='none'}
   let h=`<div class="imhead"><div class="imname">${esc(IPROF.cute_name||'?')}<span>Ironman, level ${c.sbl}</span></div><div class="imchips">${chip('coins',fmt(purse))}${chip('Magic Power',c.mp||'?')}${chip('Catacombs',Math.floor(c.cata))}${chip('minion slots',mi.slots)}</div></div>`;
   if(IMITEMS&&!IMITEMS.api)h+=`<p class="note"><span class="warn">Inventory API is off on this profile, so gear steps can't tick themselves.</span></p>`;
-  const row=(s,st,tag)=>`<div class="imr${st==='done'?' done':''}"><button class="imc" data-imk="${s[0]}" aria-label="Mark done">${st==='done'?'✓':''}</button><div class="imt"><div class="tt">${esc(s[1])}</div><div class="dd">${esc(s[2])}</div></div>${tag?`<span class="tag">${esc(tag)}</span>`:''}</div>`;
+  const row=(s,st,tag)=>`<div class="imr${st==='done'?' done':''}"><button class="imc" data-imk="${s[0]}" aria-label="Mark done">${st==='done'?'✓':''}</button>${IM_ICON[s[0]]?`<span class="imslot"><img class="ic" src="${iconUrl(IM_ICON[s[0]])}" alt="" onerror="this.parentElement.remove()"></span>`:''}<div class="imt"><div class="tt">${esc(s[1])}</div><div class="dd">${esc(s[2])}</div></div>${tag?`<span class="tag">${esc(tag)}</span>`:''}</div>`;
   // least-finished areas first, so every part of the game keeps moving
   const prog=IM_TRACKS.map(([tk,tn,steps])=>{const st=steps.map(s=>imStepState(c,s));return {tk,name:AREA[tk]||tn,steps,st,pct:st.filter(x=>x==='done').length/steps.length}}).sort((a,b)=>a.pct-b.pct);
   const next=[];for(const t of prog){const k=t.steps.findIndex((s,i)=>t.st[i]==='todo'),k2=k>=0?k:t.steps.findIndex((s,i)=>t.st[i]==='unk');if(k2>=0)next.push([t.name,t.steps[k2],t.st[k2]])}
-  const quick=next.filter(([n,s])=>!IM_GRIND.has(s[0])),grind=next.filter(([n,s])=>IM_GRIND.has(s[0])),pick=[...quick.slice(0,2).map(x=>[x[1],x[2],x[0]]),...grind.slice(0,1).map(x=>[x[1],x[2],'30 min'])];
+  const quick=next.filter(([n,s])=>!IM_GRIND.has(s[0])),grind=next.filter(([n,s])=>IM_GRIND.has(s[0])),pick=[...quick.slice(0,2).map(x=>[x[1],x[2],x[0]]),...grind.slice(0,1).map(x=>[[x[1][0],x[1][1]+', 30 min',x[1][2],x[1][3]],x[2],x[0]])];
   if(mi.next&&mi.next.u-mi.uniq<=3){const n=mi.next.u-mi.uniq;pick.unshift([['minslot',`Craft ${n} new minion tier${n>1?'s':''} for slot ${mi.next.s}`,'The cheapest ones are listed under More.',null],'todo','Minions'])}
   const tm=imTimers(m).split(' &nbsp;·&nbsp; ').filter(x=>/warn/.test(x));
   h+=`<div class="card imnow"><h2>Do now</h2>${pick.slice(0,4).map(([s,st,tag])=>row(s,st,tag)).join('')}<div class="imfoot">${tm.length?tm.join(', '):'Before you log off: fill the forge, empty minions, start a pet upgrade.'}</div></div>`;
-  const dd=imDay();h+=`<div class="imdaily">${IM_DAILY.map(([k,n])=>`<button class="chipb${dd.d[k]?' on':''}" data-imday="${k}">${esc(n)}</button>`).join('')}</div>`;
+  const dd=imDay();h+=`<div class="card"><h2>Coming up</h2><div data-events="5">${eventsHtml(5)}</div></div><div class="imstreak" id="imStreak">${imStreakHtml()}</div><div class="imdaily">${IM_DAILY.map(([k,n])=>`<button class="chipb${dd.d[k]?' on':''}" data-imday="${k}">${esc(n)}</button>`).join('')}</div>`;
   h+=`<div class="card"><h2>Areas</h2>${prog.map(t=>`<details class="imarea"><summary><span class="n">${esc(t.name)}</span><span class="imbar"><i style="width:${Math.round(t.pct*100)}%"></i></span><span class="p">${Math.round(t.pct*100)}%</span></summary>${t.steps.map((s,i)=>row(s,t.st[i])).join('')}</details>`).join('')}</div>`;
   const tc=i=>c.floor(i);
   h+=`<details class="fold"><summary>More</summary>
-<h3>Money methods</h3><div class="wrap"><table><tr><th>Method</th><th>Rate</th><th>You</th></tr>${IM_MONEY.map(([n,r,w,f])=>{let ok=null;try{ok=f(c)}catch(e){}return `<tr><td><b>${esc(n)}</b><span class="sub">${esc(w)}</span></td><td>${esc(r)}</td><td>${ok===true?'<span class="good">Ready</span>':ok===false?'<span class="dim">Not yet</span>':'<span class="dim">Check</span>'}</td></tr>`}).join('')}</table></div>
+<h3>Money methods</h3><div class="wrap"><table><tr><th>Method</th><th>Creator claim</th><th>You</th></tr>${IM_MONEY.map(([n,r,w,f])=>{let ok=null;try{ok=f(c)}catch(e){}return `<tr><td><b>${esc(n)}</b><span class="sub">${esc(w)}</span></td><td>${esc(r)}</td><td>${ok===true?'<span class="good">Ready</span>':ok===false?'<span class="dim">Not yet</span>':'<span class="dim">Check</span>'}</td></tr>`}).join('')}</table></div>
 <h3>Dungeon floors</h3><div class="wrap"><table><tr><th>Floor</th><th>Runs</th><th>Run it for</th></tr>${IM_FLOORS.map(([f,w])=>`<tr><td>F${f}</td><td>${tc(f).toLocaleString()}</td><td>${esc(w)}</td></tr>`).join('')}</table></div>
 <h3>Slayers</h3><div class="wrap"><table><tr><th>Slayer</th><th>Level</th><th>Aim for</th></tr>${IM_SLAY.map(([k,n,lv,w])=>`<tr><td>${esc(n)}</td><td>${c.slay(k)}</td><td>${c.slay(k)>=lv?'<span class="good">✓</span> ':''}Level ${lv}<span class="sub">${esc(w)}</span></td></tr>`).join('')}</table></div>
 <h3>Minions to craft for slots</h3><div class="wrap"><table id="imCraft"></table></div>
@@ -1759,7 +1825,9 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
     {key:'v',label:'Parts worth',val:r=>r.v,html:r=>r.v?fmt(r.v):'?',tip:'What the parts would sell for to an NPC'}],mi.opts.slice(0,30),'v','You have crafted every minion tier this page knows.');
   for(const b of el.querySelectorAll('button[data-imk]'))b.onclick=e=>{e.stopPropagation();imToggle(b.dataset.imk)};
   for(const t of el.querySelectorAll('.imt'))t.onclick=()=>t.parentElement.classList.toggle('open');
-  for(const x of el.querySelectorAll('button[data-imday]'))x.onclick=()=>{const d=imDay(),k=x.dataset.imday;if(d.d[k])delete d.d[k];else d.d[k]=1;save();x.classList.toggle('on')}}
+  for(const x of el.querySelectorAll('button[data-imday]'))x.onclick=()=>{const d=imDay(),k=x.dataset.imday;if(d.d[k])delete d.d[k];else d.d[k]=1;imStreakTick(d);save();x.classList.toggle('on');const s=$('imStreak');if(s)s.innerHTML=imStreakHtml()}}
+function imStreakTick(d){const n=Object.keys(d.d).length,today=+d.k.slice(1),st=S.imStreak||(S.imStreak={n:0,last:0});if(n>=3&&st.last!==today){st.n=st.last===today-1?st.n+1:1;st.last=today}}
+function imStreakHtml(){const st=S.imStreak||{n:0,last:0},today=Math.floor(Date.now()/864e5),alive=st.last>=today-1&&st.n>0,d=imDay(),c=Object.keys(d.d).length;return alive?`<b>${st.n}-day streak</b>${st.last===today?', kept today':`, tick ${Math.max(0,3-c)} more to keep it`}`:`Tick 3 dailies to start a streak`}
 function ironInit(){const b=$('imLoad'),i=$('imIgn');if(!b||b._w)return;b._w=1;b.onclick=()=>{S.imIgn=(i.value||'').trim();save();IMEM=null;loadIron()};i.onkeydown=e=>{if(e.key==='Enter')b.onclick()};if(S.imIgn&&S.imUuid&&S.imUuid!==S.uuid&&!IMEM)loadIron();else{renderIron();imSync()}}
 
 /* ---------- main account: is foraging worth more than your current rate? ---------- */
@@ -1774,6 +1842,34 @@ if(document.addEventListener)document.addEventListener('click',e=>{const x=e.tar
   const tt=x.closest('.steps .tt');if(tt){const li=tt.closest('li');if(li)li.classList.toggle('open');return}
   const dr=x.closest('.dayrow');if(dr&&x.closest('b,.sub')){e.preventDefault();dr.classList.toggle('open');return}
   const t=x.closest('.note,.sub');if(t&&!x.closest('label'))t.classList.toggle('open')});
+
+/* ---------- SkyBlock calendar: what's coming up, in real time ---------- */
+// Epoch 1st Early Spring Year 1 = 1560275700 (wiki); 1 SB day = 20 min, 31 days a month, 12 months. Checked against a known election end (Late Spring 27, Y329 = 2024-02-01 15:15 UTC).
+const SB0=1560275700e3,SBD=12e5,SBM=31*SBD,SBY=12*SBM;
+function sbAt(year,month,day){return SB0+(year-1)*SBY+month*SBM+(day-1)*SBD}
+function sbNext(month,day,lenDays,now){now=now||Date.now();const y=Math.floor((now-SB0)/SBY)+1;for(const yy of [y,y+1]){const s=sbAt(yy,month,day),e=s+lenDays*SBD;if(e>now)return {s,e}}}
+const SBEV=[ // [name, month index (0 = Early Spring), first day, days long, why it matters]
+ ['Spooky Festival',7,29,3,'Candy for the Bat Person, Candy and Intimidation lines, Black Cat pet'],
+ ['Jerry\'s Workshop',11,1,31,'Winter sea creatures, gifts, Einary\'s shop'],
+ ['New Year cake',11,29,3,'Free New Year Cake for the cake bag'],
+ ['Election ends',2,27,1,'New mayor and minister take office']];
+function sbHourly(min,len,now){now=now||Date.now();const d=new Date(now);d.setSeconds(0,0);d.setMinutes(min);let s=+d;if(s+len*6e4<=now)s+=36e5;else if(s>now&&s-36e5+len*6e4>now)s-=36e5;return {s,e:s+len*6e4}}
+function inTxt(ms){if(ms<=0)return 'now';const m=Math.round(ms/6e4);if(m<60)return `in ${m}m`;const h=Math.floor(m/60);if(h<48)return `in ${h}h ${m%60}m`;return `in ${Math.round(h/24)} days`}
+function sbUpcoming(){const now=Date.now(),out=[];
+  const da=sbHourly(55,5,now),jc=sbHourly(15,20,now);
+  out.push({n:'Dark Auction',t:da,w:'Every hour at :55'},{n:'Jacob\'s contest',t:jc,w:'Every hour, :15 to :35'});
+  for(const [n,mo,d,len,w] of SBEV){const t=sbNext(mo,d,len,now);if(t)out.push({n,t,w})}
+  return out.map(x=>({...x,live:x.t.s<=now&&x.t.e>now})).sort((a,b)=>(b.live-a.live)||(a.t.s-b.t.s))}
+function eventsHtml(max){const ev=sbUpcoming().slice(0,max||6);return `<div class="sbev">${ev.map(x=>`<div class="sbe${x.live?' live':''}"><b>${esc(x.n)}</b><span>${x.live?'on now, ends '+inTxt(x.t.e-Date.now()).replace('in ',''):inTxt(x.t.s-Date.now())}</span></div>`).join('')}</div>`}
+function renderEvents(){if(!document.querySelectorAll)return;for(const el of document.querySelectorAll('[data-events]'))el.innerHTML=eventsHtml(+el.dataset.events||6)}
+setInterval(()=>{try{renderEvents()}catch(e){}},6e4);
+
+/* ---------- phone nav: five main tabs and a More sheet for the rest ---------- */
+const NAV_MAIN=['home','day','forge','fuse','iron'];
+function navMore(){const n=$('tabs');if(!n||!n.appendChild||n.querySelector('.navmore'))return;const b=document.createElement('button');b.className='navmore';b.type='button';b.innerHTML='<span class="dots">⋯</span>More';b.onclick=e=>{e.stopPropagation();n.classList.toggle('open')};n.appendChild(b);navClose()}
+function navClose(){const n=$('tabs');if(!n||!n.classList)return;n.classList.remove('open');const m=n.querySelector&&n.querySelector('.navmore');if(m)m.classList.toggle('on',!NAV_MAIN.includes(S.tab))}
+if(document.addEventListener)document.addEventListener('click',e=>{const n=$('tabs');if(n&&n.classList&&n.classList.contains('open')&&!(e.target.closest&&e.target.closest('#tabs')))navClose()});
+setTimeout(()=>{try{navMore();if(document.body)document.body.dataset.tab=S.tab}catch(e){}},0);
 
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;
@@ -1937,7 +2033,7 @@ const timeLeft=ms=>{const m=Math.max(0,Math.round(ms/6e4));return m>=1440?Math.f
 function renderActive(){const now=Date.now(),el=$('forgeActive'),act=S.active.slice().sort((a,b)=>a.end-b.end);
   el.innerHTML=act.map(a=>{const done=!a.unk&&a.end<=now;return `<div class="slot ${done?'ready':''}"><b>${esc(a.name)}</b><span class="t ${done?'good':''}">${a.unk?'In forge':done?'Ready':timeLeft(a.end-now)}</span>
     <span class="sub">${a.unk?'Forge time unknown for this item':(done?'Finished ':'Done ')+new Date(a.end).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'})}${a.cost!=null?`, paid ${fmt(a.cost)}, expect +${fmt(a.profit)}`:''}${a.api?', from your profile':''}</span>
-    ${a.api?'':`<button data-done="${a.key}">${done?'Collected':'Cancel'}</button>`}</div>`}).join('')+
+    ${a.api?'':`<button data-done="${a.key}">${done?'Mark collected':'Cancel'}</button>`}</div>`}).join('')+
     (freeSlots()?`<div class="slot free"><span class="t">${freeSlots()}</span>free slot${freeSlots()===1?'':'s'}</div>`:'');tabBadges();
   el.querySelectorAll('button[data-done]').forEach(b=>b.onclick=()=>{const a=S.active.find(x=>x.key===b.dataset.done);
     if(a&&a.end<=Date.now())S.log.unshift({key:a.key,at:Date.now(),type:'forge',name:a.name,cost:a.cost,expected:a.profit,onBz:!!a.onBz,sold:null,profit:null}); // finished crafts go to the profit log
@@ -2288,7 +2384,7 @@ function renderLog(){const sum=Object.keys(LTYPE).map(t=>{const h=hitRate(t),all
     {key:'done',label:'Sold',val:r=>r.done,html:r=>`${r.done} of ${r.count}`},
     {key:'act',label:'Real profit',val:r=>r.act,html:r=>`<span class="${r.act<0?'bad':'good'}">${fmt(r.act)}</span>`},
     {key:'exp',label:'Page expected',val:r=>r.exp,html:r=>r.n?fmt(r.exp):'',wide:true,tip:'For the sold entries that had an expected profit'},
-    {key:'rate',label:'Hit rate',val:r=>r.rate,html:r=>r.rate<0?'':Math.round(r.rate)+'%',tip:'Real profit as a share of what the page expected'},
+    {key:'rate',label:'vs expected',val:r=>r.rate,html:r=>r.rate<0?'':Math.round(r.rate)+'%',tip:'Real profit as a share of what the page expected'},
     {key:'learned',label:'Best plan uses',val:r=>r.learned?1:0,html:r=>r.learned?'Your hit rate':`Default ${Math.round(DEFRISK[r.type]*100)}% until 5 are sold`,wide:true}],sum,'act','Nothing logged yet. Press Collected on a finished forge craft, or add a flip below.');
   table($('logT'),[
     {key:'name',label:'Item',val:r=>r.name,html:r=>`<span class="tag">${LTYPE[r.type]}</span>${esc(r.name)}`},
@@ -2356,7 +2452,7 @@ function renderHome(){const card=(title,tab,body)=>`<div class="card"><h2>${titl
   const ah=AH&&AH.found?AH.found.slice(0,3):null;
   const bp=FORGE&&BZ?bestPlan():null;
   const planCard=nowCard2(),pd=typeof progData==='function'?progData():null,cr=CRAFT&&BZ?craftRows().filter(r=>!r.miss).sort((a,b)=>b.score-a.score).slice(0,4):null;
-  $('cards').innerHTML=[`<div style="grid-column:1/-1">${termCard()}${dayLine()}</div>`,planCard,
+  $('cards').innerHTML=[planCard,`<div style="grid-column:1/-1">${termCard()}${dayLine()}<details class="fold sbfold"><summary>Coming up</summary><div data-events="6">${typeof eventsHtml==='function'?eventsHtml(6):''}</div></details></div>`,
     card('Forge','forge',(S.active.length?`<ul>${S.active.slice().sort((a,b)=>a.end-b.end).map(a=>li(esc(a.name),a.end<=Date.now()?'<span class="good">Ready</span>':timeLeft(a.end-Date.now()))).join('')}</ul>`:'')+
       (!FORGE?none(LOADING('forge')):!freeSlots()?none('All '+S.slots+' slots are in use.'):fp.plan.length?`<div class="big">${fmt(fp.total)} <small>per check-in from ${freeSlots()} free slot${freeSlots()===1?'':'s'}, ${fmt(fp.spent)} in</small></div><ul>${fp.plan.map(p=>li(p.n+'× '+esc(p.name),'<span class="good">'+fmt(p.ppc)+'</span>')).join('')}</ul>`:none('No forge craft fits your coins right now.'))),
     (()=>{const sr=stockRows().rows,todo=sr.filter(r=>r.toGet>0),wait=sr.filter(r=>r.ordered>0).length;
@@ -2370,7 +2466,7 @@ function renderHome(){const card=(title,tab,body)=>`<div class="card"><h2>${titl
 /* ---------- refresh loop ---------- */
 function status(){const t=(k,n)=>ERR[k]?`<span class="st err"><i></i>${n} failed</span>`:stamp[k]?`<span class="st ok" title="Last loaded"><i></i>${n} ${new Date(stamp[k]).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>`:`<span class="st"><i></i>${n} not loaded</span>`;
   $('status').innerHTML=(purse()!=null?`<span class="st ok" id="usePurse" style="cursor:pointer" title="Coins to spend follows your purse. If you typed your own number, click here to go back to the purse. Bank coins are never counted."><i></i>Purse ${fmt(purse())}${S.autob!==false?'':', click to use'}${bankBal()!=null?', bank '+fmt(bankBal()):''}</span>`:'')+t('bz','Bazaar')+t('forge','Forge')+t('kat','Kat')+t('ah','Auctions')+(MAYOR?`<span class="st${TAXX>1?' alert':''}">Mayor ${esc(MAYOR)}${TAXX>1?', taxes ×4':''}</span>`:'');tabBadges();const up=$('usePurse');if(up)up.onclick=()=>{S.autob=true;usePurseNow();renderAll()}}
-function renderAll(){applyCheckin();accInit();ironInit();renderForage();renderDay();renderFuse();renderProfile();renderCraft();renderCal();renderProg();renderAcc();renderHome();renderForge();renderStock();renderLog();renderKat();renderBazaar();renderWatch();if(AH)evalAuctions();else renderAH();status();applyTabs()}
+function renderAll(){applyCheckin();accInit();ironInit();renderForage();renderEvents();renderDay();renderFuse();renderProfile();renderCraft();renderCal();renderProg();renderAcc();renderHome();renderForge();renderStock();renderLog();renderKat();renderBazaar();renderWatch();if(AH)evalAuctions();else renderAH();status();applyTabs()}
 async function refresh(force){const jobs=[],run=(k,fn)=>jobs.push(fn().then(()=>{delete ERR[k]}).catch(e=>{ERR[k]=e.message;console.warn(e)}));
   if(force||!BZ||Date.now()-stamp.bz>30000)run('bz',loadBazaar);
   if(force||!FORGE||Date.now()-stamp.forge>300000)run('forge',loadForge);

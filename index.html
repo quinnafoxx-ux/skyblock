@@ -442,6 +442,12 @@ button.chipb.on{background:var(--goldbg);color:var(--gold);border-color:var(--go
 #cards .card:has(> h2 > button[data-go]):not(:has(.big,.good)){display:none}
 #cards .card>h2{font-size:16px}#cards .card>h2 button{min-height:32px;padding:2px 12px;font-size:13px}
 .imdaily{margin-top:14px}.card.imnow{margin-bottom:0}
+/* expand on demand: step and daily details stay hidden until you tap the title */
+.steps li .dd{display:none}.steps li.open .dd,.steps li .dd.open{display:block;-webkit-line-clamp:unset;overflow:visible}
+.steps .tt{cursor:pointer}.steps li:not(.open) .tt::after{content:" ›";color:var(--faint);font-weight:400}
+.dayrow .sub{display:none}.dayrow .sub.open,.dayrow.open .sub{display:block}
+.dayrow b{cursor:pointer}.dayrow:not(.open) b::after{content:" ›";color:var(--faint);font-weight:400}
+.dayrow .sub{display:none!important}.dayrow.open .sub{display:block!important}
 </style>
 </head>
 <body>
@@ -539,7 +545,7 @@ button.chipb.on{background:var(--goldbg);color:var(--gold);border-color:var(--go
     <details class="how"><summary><span>Shard fusions that pay more than your mining.</span></summary><p>Checks every fusion recipe against live Bazaar prices. You buy two kinds of shard with buy orders, fuse them, and sell the result with a sell offer. A fusion is only listed when the profit is at least double what the same minutes of mining would earn, and the amount is capped so your buy orders fill within about 3 hours on a quarter of the shards people sell instantly, and the result sells within a day. Recipes are from skyshards.com.</p></details>
     <div id="fuseDo"></div>
     <details class="fold"><summary>Every fusion that beats your time</summary><p class="note" id="fuseNote"></p><div class="wrap"><table id="fuseT"></table></div></details>
-    <details class="fold" open><summary>Big-margin buy orders</summary><p class="note" id="bigNote"></p><div class="wrap"><table id="bigT"></table></div><p class="note" id="bigSpike"></p></details>
+    <details class="fold"><summary>Big-margin buy orders</summary><p class="note" id="bigNote"></p><div class="wrap"><table id="bigT"></table></div><p class="note" id="bigSpike"></p></details>
     <details class="fold"><summary>Shards to keep buy orders on</summary><p class="note" id="bulkNote"></p><div class="wrap"><table id="bulkT"></table></div></details>
     <details class="fold"><summary>Your Hunting Box</summary><p class="note" id="boxNote"></p><div class="wrap"><table id="boxT"></table></div></details>
   </section>
@@ -644,12 +650,12 @@ function table(el,cols,rows,defKey,emptyMsg,after,detail){
   const col=cols.find(c=>c.key===st.key)||cols[0],again=()=>table(el,cols,rows,defKey,emptyMsg,after,detail);
   const sorted=rows.slice().sort((a,b)=>{const x=col.val(a),y=col.val(b);return (typeof x==='string'?x.localeCompare(y):(x||0)-(y||0))*st.dir});
   if(!rows.length){el.innerHTML=`<tr><td class="empty">${emptyMsg||'Nothing matches your settings right now.'}</td></tr>`;return}
-  const shown=st.all?sorted:sorted.slice(0,30),w=c=>c.wide?' class="w"':'';
+  const shown=st.all?sorted:sorted.slice(0,6),w=c=>c.wide?' class="w"':'';
   el.innerHTML='<thead><tr>'+cols.map(c=>`<th data-k="${c.key}" class="${c.key===st.key?'sorted':''}${c.wide?' w':''}" title="${esc(c.tip||'')}">${c.label}${c.key===st.key?(st.dir<0?' ▾':' ▴'):''}</th>`).join('')+'</tr></thead><tbody>'+
     shown.map(r=>{const k=detail?String(r.id||r.name):'';
       return `<tr${detail?` class="has-detail" data-k="${esc(k)}"`:''}>`+cols.map((c,j)=>`<td${w(c)}>${j===0&&detail?`<span class="caret">${st.open[k]?'▾':'▸'}</span>`:''}${c.html?c.html(r):esc(c.val(r))}</td>`).join('')+'</tr>'+
         (detail?`<tr class="detail"${st.open[k]?'':' hidden'}><td colspan="${cols.length}">${detail(r)}</td></tr>`:'')}).join('')+'</tbody>'+
-    (sorted.length>30?`<tfoot><tr><td class="more" colspan="${cols.length}"><button data-more>${st.all?'Show top 30':'Show all '+sorted.length}</button></td></tr></tfoot>`:'');
+    (sorted.length>6?`<tfoot><tr><td class="more" colspan="${cols.length}"><button data-more>${st.all?'Show fewer':'Show all '+sorted.length}</button></td></tr></tfoot>`:'');
   const more=el.querySelector('button[data-more]');if(more)more.onclick=()=>{st.all=!st.all;again()};
   el.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(st.key===k)st.dir*=-1;else{st.key=k;st.dir=k==='name'?1:-1}again()});
   el.querySelectorAll('button[data-cmd]').forEach(b=>b.onclick=()=>copy(b.dataset.cmd,b));
@@ -1157,7 +1163,7 @@ function renderAcc(){const sec=$('acc');if(!sec)return;const view=S.accview||'ac
       planBox.innerHTML=`<div class="chips" style="margin:0 0 8px">${[1200,1350,1500].map(t=>`<button class="chipbtn${tg===t?' on':''}" data-tg="${t}">${t.toLocaleString()} for ${t===1200?'M5':t===1350?'M6':'M7'}</button>`).join('')}</div><p class="note">${pl.start>=tg?`You are already at ${pl.start.toLocaleString()}.`:!last?'Nothing left to add.':`${reach?`<b>${tg.toLocaleString()}</b> from ${pl.start.toLocaleString()}:`:`Buying, crafting and recombobulating only reach <b>${last.mp.toLocaleString()}</b> of ${tg.toLocaleString()}; the rest has to be earned. That is`} <b>${pl.steps.length} steps</b> for <b>${fmt(last.spent)}</b> (${pl.steps.filter(s=>s.kind==='buy').length} buy, ${pl.steps.filter(s=>s.kind==='craft').length} craft, ${pl.steps.filter(s=>s.kind==='recomb').length} recombobulate${pl.slots?`, ${pl.slots} new bag slots`:''}).${fit!=null&&fit<pl.steps.length?` Your purse covers the first ${fit}.`:''}`}</p>`;
       for(const b of planBox.querySelectorAll('[data-tg]'))b.onclick=()=>{S.acctarget=+b.dataset.tg;save();renderAcc()}}}
   {const bg=$('accBag');if(bg){if(d.known&&INV&&INV.acc.length){const RO={COMMON:0,UNCOMMON:1,RARE:2,EPIC:3,LEGENDARY:4,MYTHIC:5,SPECIAL:6,VERY_SPECIAL:7},act=new Set(Object.keys(d.st.active)),list=INV.acc.slice().sort((a,b)=>(RO[rarityOf(b)]||0)-(RO[rarityOf(a)]||0));
-      bg.innerHTML=`<details class="fold" open><summary>Your bag, ${list.length} accessories</summary><div class="pgrid" style="margin-top:10px">${list.map(i=>slotHtml(i,{dim:!act.has(i.id)})).join('')}</div></details>`;wireTips(bg)}else bg.innerHTML=''}}
+      bg.innerHTML=`<details class="fold"><summary>Your bag, ${list.length} accessories</summary><div class="pgrid" style="margin-top:10px">${list.map(i=>slotHtml(i,{dim:!act.has(i.id)})).join('')}</div></details>`;wireTips(bg)}else bg.innerHTML=''}}
   const chips=[['all','All, best value first'],['buy','Buy on the AH'],['craft','Craft'],['recomb','Recombobulate'],['bag','Owned, not in bag'],['self','Earn yourself'],['lock','Locked for you']];
   $('accChips').innerHTML=chips.filter(c=>c[0]==='all'||counts[c[0]]).map(c=>`<button class="chipbtn${f===c[0]?' on':''}" data-f="${c[0]}">${c[1]} <b>${counts[c[0]]||0}</b></button>`).join('');
   for(const b of $('accChips').querySelectorAll('button'))b.onclick=()=>{S.accf=b.dataset.f;save();renderAcc()};
@@ -1279,7 +1285,7 @@ function dayRows(){const st=dayState(),rows=[],now=Date.now(),pc=typeof cataPace
   for(const r of rows)r.done=r.auto===true||!!st.done[r.id];
   return {rows,drop}}
 function renderDay(){const el=$('dayList');if(!el)return;const st=dayState(),d=dayRows(),left=d.rows.filter(r=>!r.done).length;
-  $('dayHead').innerHTML=`<div class="plan"><div class="head"><span class="k">Today</span><span class="v">${left?left+' left':'All done'}</span></div>${left?'Work down the list. Menu jobs first, then the first-of-the-day bonuses, then coins.':'Everything is ticked. Go mine.'} Ticks clear when the game's day rolls over, at 4 PM Pacific (midnight UTC), the same moment your 5 bonus runs reset.</div>`;
+  $('dayHead').innerHTML=`<div class="plan"><div class="head"><span class="k">Today</span><span class="v">${left?left+' left':'All done'}</span></div>${left?'':'Everything is ticked. Go mine.'} Ticks clear when the game's day rolls over, at 4 PM Pacific (midnight UTC), the same moment your 5 bonus runs reset.</div>`;
   let html='',g='';for(const r of d.rows){if(r.group!==g){g=r.group;html+=`<h3 style="margin:16px 0 6px">${esc(g)}</h3>`}
     html+=`<label class="dayrow${r.done?' done':''}"><input type="checkbox" data-d="${esc(r.id)}"${r.done?' checked':''}${r.auto===true?' disabled':''}><span class="t"><b>${esc(r.name)}</b>${r.pays?` <span class="good">${fmt(r.pays)}</span><span class="dim"> ${r.live?'live price':'claimed'}, +${fmt(r.vs)} after your time</span>`:''}<span class="sub">${esc(r.note)}${r.auto===true?' Ticked by the page.':''}</span></span>${r.tab?`<button data-tab="${r.tab}">Open</button>`:''}${r.cube?`<button data-cube>I just did it</button>`:''}${r.custom?`<button data-rm="${esc(r.custom)}" title="Remove">Remove</button>`:''}</label>`}
   el.innerHTML=html;
@@ -1764,7 +1770,10 @@ function renderForage(){const el=$('forageCard');if(!el)return;if(!BZ||!MEMBER){
   const mine=S.rate||0,better=rate>mine*1.15,need=lv!=null&&lv<15;
   el.innerHTML=`<div class="card"><h2>Foraging check</h2><p>${better?`<b class="good">Fig foraging could beat your rate.</b>`:`<b>Fig foraging does not beat your rate right now.</b>`} At today's Figstone price (${fmt(px)} to a buy order) a practised 150 an hour is about <b>${fmt(rate)}</b> an hour, against your ${fmt(mine)}.</p><p class="note">${lv!=null?`You are Foraging ${lv}. `:''}${need?`Fig armor needs Foraging 15, so this is ${15-lv} levels away. `:''}Needs Fig armor (about 6M) and a Figstone Splitter. The 150 an hour is what guide makers report, not measured on you; expect less while learning the route.</p></div>`}
 
-if(document.addEventListener)document.addEventListener('click',e=>{const t=e.target&&e.target.closest&&e.target.closest('.note,.dd,.sub');if(t&&!e.target.closest('button,a,input,label'))t.classList.toggle('open')});
+if(document.addEventListener)document.addEventListener('click',e=>{const x=e.target;if(!x||!x.closest||x.closest('button,a,input,select'))return;
+  const tt=x.closest('.steps .tt');if(tt){const li=tt.closest('li');if(li)li.classList.toggle('open');return}
+  const dr=x.closest('.dayrow');if(dr&&x.closest('b,.sub')){e.preventDefault();dr.classList.toggle('open');return}
+  const t=x.closest('.note,.sub');if(t&&!x.closest('label'))t.classList.toggle('open')});
 
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;

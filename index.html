@@ -1871,6 +1871,15 @@ function navClose(){const n=$('tabs');if(!n||!n.classList)return;n.classList.rem
 if(document.addEventListener)document.addEventListener('click',e=>{const n=$('tabs');if(n&&n.classList&&n.classList.contains('open')&&!(e.target.closest&&e.target.closest('#tabs')))navClose()});
 setTimeout(()=>{try{navMore();if(document.body)document.body.dataset.tab=S.tab}catch(e){}},0);
 
+/* ---------- profile status chip + load fusion data without waiting for the profile ---------- */
+let KEYMSG='';
+function profChip(){const fresh=MEMBER&&stamp.member&&Date.now()-stamp.member<5*60e3;
+  if(fresh)return `<span class="st ok" title="Your profile, last read"><i></i>Profile ${new Date(stamp.member).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>`;
+  const bad=/bad|No key|warn/.test(KEYMSG),txt=/No key/.test(KEYMSG)?'Add your API key':/expired|wrong/.test(KEYMSG)?'Key expired, tap to fix':/Rate/.test(KEYMSG)?'Rate limited':/reach/.test(KEYMSG)?'Profile offline':bad?'Profile failed':'Profile loading';
+  return `<span class="st ${bad?'err':''}" data-fixkey="1" style="cursor:pointer" title="Open Settings"><i></i>${txt}</span>`}
+if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-fixkey]');if(t){const g=$('gear');if(g)g.click()}});
+setTimeout(()=>{try{accInit()}catch(e){}},0);
+
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;
 async function loadSlotCosts(){if(SLOTCOST)return;try{const items=await loadItemsRaw(),m={};for(const it of items){const gs=it.gemstone_slots;if(!gs||!gs.some(x=>x.costs&&x.costs.length))continue;const o={},cnt={};for(const x of gs){const idx=cnt[x.slot_type]||0;cnt[x.slot_type]=idx+1;if(x.costs&&x.costs.length)o[x.slot_type+'_'+idx]=x.costs}m[it.id]=o}SLOTCOST=m}catch(e){}}
@@ -1939,7 +1948,7 @@ function renderCraft(){const el=$('craftT');if(!el)return;const rows=craftRows()
 let PROFILE=null,MEMBER=null,PROFDATA=null;
 /* ---------- your Hypixel API key (own storage entry, never inside S or a backup) ---------- */
 const KEYSTORE='sbflip_key';const getKey=()=>{try{return localStorage.getItem(KEYSTORE)||''}catch(e){return ''}};
-function keyMsg(h){const e=$('keyMsg');if(e)e.innerHTML=h}
+function keyMsg(h){const e=$('keyMsg');if(e)e.innerHTML=h;KEYMSG=h;try{status()}catch(_){}}
 async function loadMember(){const k=getKey();if(!k){keyMsg('No key yet. <a href="https://developer.hypixel.net/dashboard" target="_blank" rel="noopener" style="color:var(--accent)">Get one</a>');return}
   keyMsg('Checking key…');let r,j;try{r=await fetch('https://api.hypixel.net/v2/skyblock/profiles?uuid='+S.uuid,{headers:{'API-Key':k}});j=await r.json()}catch(e){keyMsg('<span class="bad">Could not reach Hypixel</span>');return}
   if(r.status===403){keyMsg('<span class="bad">Key expired or wrong.</span> <a href="https://developer.hypixel.net/dashboard" target="_blank" rel="noopener" style="color:var(--accent)">Get a new one</a>');return}
@@ -2465,7 +2474,7 @@ function renderHome(){const card=(title,tab,body)=>`<div class="card"><h2>${titl
 
 /* ---------- refresh loop ---------- */
 function status(){const t=(k,n)=>ERR[k]?`<span class="st err"><i></i>${n} failed</span>`:stamp[k]?`<span class="st ok" title="Last loaded"><i></i>${n} ${new Date(stamp[k]).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</span>`:`<span class="st"><i></i>${n} not loaded</span>`;
-  $('status').innerHTML=(purse()!=null?`<span class="st ok" id="usePurse" style="cursor:pointer" title="Coins to spend follows your purse. If you typed your own number, click here to go back to the purse. Bank coins are never counted."><i></i>Purse ${fmt(purse())}${S.autob!==false?'':', click to use'}${bankBal()!=null?', bank '+fmt(bankBal()):''}</span>`:'')+t('bz','Bazaar')+t('forge','Forge')+t('kat','Kat')+t('ah','Auctions')+(MAYOR?`<span class="st${TAXX>1?' alert':''}">Mayor ${esc(MAYOR)}${TAXX>1?', taxes ×4':''}</span>`:'');tabBadges();const up=$('usePurse');if(up)up.onclick=()=>{S.autob=true;usePurseNow();renderAll()}}
+  $('status').innerHTML=profChip()+(purse()!=null?`<span class="st ok" id="usePurse" style="cursor:pointer" title="Coins to spend follows your purse. If you typed your own number, click here to go back to the purse. Bank coins are never counted."><i></i>Purse ${fmt(purse())}${S.autob!==false?'':', click to use'}${bankBal()!=null?', bank '+fmt(bankBal()):''}</span>`:'')+t('bz','Bazaar')+t('forge','Forge')+t('kat','Kat')+t('ah','Auctions')+(MAYOR?`<span class="st${TAXX>1?' alert':''}">Mayor ${esc(MAYOR)}${TAXX>1?', taxes ×4':''}</span>`:'');tabBadges();const up=$('usePurse');if(up)up.onclick=()=>{S.autob=true;usePurseNow();renderAll()}}
 function renderAll(){applyCheckin();accInit();ironInit();renderForage();renderEvents();renderDay();renderFuse();renderProfile();renderCraft();renderCal();renderProg();renderAcc();renderHome();renderForge();renderStock();renderLog();renderKat();renderBazaar();renderWatch();if(AH)evalAuctions();else renderAH();status();applyTabs()}
 async function refresh(force){const jobs=[],run=(k,fn)=>jobs.push(fn().then(()=>{delete ERR[k]}).catch(e=>{ERR[k]=e.message;console.warn(e)}));
   if(force||!BZ||Date.now()-stamp.bz>30000)run('bz',loadBazaar);

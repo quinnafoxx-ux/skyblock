@@ -410,6 +410,13 @@ nav button{font-size:15px}
   header h1{grid-row:1}header>label{grid-row:2}#gear{grid-row:2;grid-column:2}#refresh{grid-row:2;grid-column:3}
   #checkLbl{grid-row:3}#status{grid-row:4}#settings{grid-row:5}
 }
+/* less text: intros gone; notes, step details and sub-lines show one or two lines until tapped */
+details.how,#hidTabs{display:none!important}
+.note,.sub{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden;cursor:pointer}
+.steps .dd{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;cursor:pointer}
+.note.open,.sub.open,.steps .dd.open{display:block;-webkit-line-clamp:unset;overflow:visible}
+.note:has(.bad),.note:has(.warn),.sub.warn,.sub.bad{display:block;-webkit-line-clamp:unset}
+.note{margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -1702,14 +1709,14 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
   // balance: least-finished areas first, so every part of the game keeps moving instead of one skill running ahead
   const prog=IM_TRACKS.map(([tk,tn,steps])=>{const st=steps.map(s=>imStepState(c,s));return {tk,tn,steps,st,pct:st.filter(x=>x==='done').length/steps.length}});
   const next=[];for(const t of [...prog].sort((a,b)=>a.pct-b.pct)){const s=t.steps.find(s=>imStepState(c,s)==='todo')||t.steps.find(s=>imStepState(c,s)==='unk');if(s)next.push([t.tn,s,imStepState(c,s)])}
-  h+=`<div class="card"><h2>Balance</h2><p class="note">How far along each area is. Sessions pull from the lowest bars first so nothing gets left behind.</p>${[...prog].sort((a,b)=>a.pct-b.pct).map(t=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="width:150px">${esc(t.tn.split(' (')[0])}</span><span style="flex:1;height:10px;background:var(--line,#262C34);border-radius:5px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(t.pct*100)}%;background:var(--accent,#FFB62E)"></span></span><span class="dim" style="width:42px;text-align:right">${Math.round(t.pct*100)}%</span></div>`).join('')}</div>`;
+  h+=`<div class="card"><h2>Balance</h2>${[...prog].sort((a,b)=>a.pct-b.pct).map(t=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="width:150px">${esc(t.tn.split(' (')[0])}</span><span style="flex:1;height:10px;background:var(--line,#262C34);border-radius:5px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(t.pct*100)}%;background:var(--accent,#FFB62E)"></span></span><span class="dim" style="width:42px;text-align:right">${Math.round(t.pct*100)}%</span></div>`).join('')}</div>`;
   const stepLi=(s,st,tag)=>`<li><div><div class="tt">${tag?`<span class="tag">${esc(tag)}</span>`:''}${st==='done'?'<span class="good">✓</span> ':''}${esc(s[1])}</div><div class="dd">${esc(s[2])}${st==='unk'?' <span class="dim">(can\'t check this from the API)</span>':''}</div></div><div class="mc"><button data-imk="${s[0]}" style="padding:2px 8px;font-size:12px">${(S.imDone||{})[s[0]]?'Undo':'Done'}</button></div></li>`;
   // quick session: start the timers, then the next step you can finish in one sitting, then one grind to chip at
   {const quick=next.filter(([tn,s])=>!IM_GRIND.has(s[0])),grind=next.filter(([tn,s])=>IM_GRIND.has(s[0]));
    const pick=[...quick.slice(0,2),...grind.slice(0,1)];
-   h+=`<div class="card"><h2>Quick session</h2><p class="note">For a short hop over from your main. Timers first so the profile keeps moving while you're away, then the quickest steps, then 30 minutes on one grind.</p><ol class="steps"><li><div><div class="tt"><span class="tag">Timers</span>Start everything that runs while you're offline</div><div class="dd">${IM_TIMERS.map(([n,d])=>`<b>${esc(n)}:</b> ${esc(d)}`).join('<br>')}</div></div></li>${pick.map(([tn,s,st])=>stepLi(s,st,IM_GRIND.has(s[0])?'30 min on':tn.split(' (')[0])).join('')}<li><div><div class="tt"><span class="tag">Daily</span>Experiments, if you haven't today</div><div class="dd">Three free ones; about 300k and Enchanting XP.</div></div></li></ol></div>`}
-  h+=`<div class="card"><h2>All next steps</h2><ol class="steps">${next.slice(0,6).map(([tn,s,st])=>stepLi(s,st,tn.split(' (')[0])).join('')}</ol></div>`;
-  const dd=imDay();h+=`<div class="card"><h2>Ironman dailies</h2><div>${IM_DAILY.map(([k,n])=>`<label style="display:block;margin:4px 0"><input type="checkbox" data-imday="${k}"${dd.d[k]?' checked':''}> ${esc(n)}</label>`).join('')}</div><p class="note">Resets at 4 PM Pacific (UTC midnight).</p></div>`;
+   h+=`<div class="card"><h2>Quick session</h2><ol class="steps"><li><div><div class="tt"><span class="tag">Timers</span>Start what runs offline</div><div class="dd">Fill the forge. Empty minions and refuel the composter. Start a pet upgrade at Kat. Keep a profile upgrade running at Elizabeth.</div></div></li>${pick.map(([tn,s,st])=>stepLi(s,st,IM_GRIND.has(s[0])?'30 min on':tn.split(' (')[0])).join('')}<li><div><div class="tt"><span class="tag">Daily</span>Experiments, if you haven't today</div><div class="dd">Three free a day.</div></div></li></ol></div>`}
+  h+=`<details class="fold"><summary>Next step in every area</summary><ol class="steps">${next.map(([tn,s,st])=>stepLi(s,st,tn.split(' (')[0])).join('')}</ol></details>`;
+  const dd=imDay();h+=`<div class="card"><h2>Ironman dailies</h2><div>${IM_DAILY.map(([k,n])=>`<label style="display:block;margin:4px 0"><input type="checkbox" data-imday="${k}"${dd.d[k]?' checked':''}> ${esc(n)}</label>`).join('')}</div></div>`;
   h+=`<details class="fold" open><summary>Money methods for where you are</summary><div class="wrap"><table><tr><th>Method</th><th>Rate</th><th>Needs</th><th>You</th></tr>${IM_MONEY.map(([n,r,w,f])=>{let ok=null;try{ok=f(c)}catch(e){}return `<tr><td><b>${esc(n)}</b></td><td>${esc(r)}</td><td>${esc(w)}</td><td>${ok===true?'<span class="good">Ready</span>':ok===false?'<span class="dim">Not yet</span>':'<span class="dim">Check</span>'}</td></tr>`}).join('')}</table></div><p class="note">Rates are what guide makers reported in 2026 videos, not measured on your profile. Minions are for materials and sacks on Ironman, not coins.</p></details>`;
   for(const [tk,tn,steps] of IM_TRACKS){const st=steps.map(s=>imStepState(c,s)),done=st.filter(x=>x==='done').length;
     h+=`<details class="fold"><summary>${esc(tn)} <span class="dim">${done} of ${steps.length}</span></summary><ol class="steps">${steps.map((s,i)=>stepLi(s,st[i])).join('')}</ol></details>`}
@@ -1733,6 +1740,8 @@ function renderForage(){const el=$('forageCard');if(!el)return;if(!BZ||!MEMBER){
   const px=bid(id)||0;if(!(px>0)){el.innerHTML='';return}const rate=150*px*(1-bzTax())+7e6,x=MEMBER.player_data&&MEMBER.player_data.experience,t=SKILLXP&&SKILLXP.foraging;let lv=null;if(x&&t){lv=0;const xp=x.SKILL_FORAGING||0;for(const n of t){if(xp>=n)lv++;else break}}
   const mine=S.rate||0,better=rate>mine*1.15,need=lv!=null&&lv<15;
   el.innerHTML=`<div class="card"><h2>Foraging check</h2><p>${better?`<b class="good">Fig foraging could beat your rate.</b>`:`<b>Fig foraging does not beat your rate right now.</b>`} At today's Figstone price (${fmt(px)} to a buy order) a practised 150 an hour is about <b>${fmt(rate)}</b> an hour, against your ${fmt(mine)}.</p><p class="note">${lv!=null?`You are Foraging ${lv}. `:''}${need?`Fig armor needs Foraging 15, so this is ${15-lv} levels away. `:''}Needs Fig armor (about 6M) and a Figstone Splitter. The 150 an hour is what guide makers report, not measured on you; expect less while learning the route.</p></div>`}
+
+if(document.addEventListener)document.addEventListener('click',e=>{const t=e.target&&e.target.closest&&e.target.closest('.note,.dd,.sub');if(t&&!e.target.closest('button,a,input,label'))t.classList.toggle('open')});
 
 /* ---------- craft flips: buy materials, craft, sell ---------- */
 let SLOTCOST=null;

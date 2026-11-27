@@ -417,6 +417,31 @@ details.how,#hidTabs{display:none!important}
 .note.open,.sub.open,.steps .dd.open{display:block;-webkit-line-clamp:unset;overflow:visible}
 .note:has(.bad),.note:has(.warn),.sub.warn,.sub.bad{display:block;-webkit-line-clamp:unset}
 .note{margin-bottom:8px}
+/* Ironman tab */
+.imhead{margin:0 0 12px}.imname{font:700 22px/1.2 var(--body)}.imname span{display:block;font:400 13px var(--body);color:var(--dim);margin-top:2px}
+.imchips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.imchip{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 4px;text-align:center;min-width:0}
+.imchip b{display:block;font:700 16px var(--mono)}.imchip span{display:block;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imr{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.card.imnow>h2+.imr,.imarea>summary+.imr{border-top:0}
+button.imc{flex:0 0 26px;width:26px;height:26px;min-height:26px;padding:0;border-radius:50%;border:2px solid var(--line2);background:none;color:var(--good,#22C55E);font-weight:700;font-size:14px;line-height:1}
+.imr.done button.imc{border-color:var(--good,#22C55E)}.imr.done .tt{color:var(--faint);text-decoration:line-through}
+.imt{flex:1;min-width:0;cursor:pointer}.imt .tt{font-weight:600;font-size:15px;line-height:1.35}
+.imt .dd{display:none;color:var(--dim);font-size:13.5px;margin-top:3px}.imr.open .imt .dd{display:block}
+.imr .tag{flex:0 0 auto;font-size:11px;margin-top:2px}
+.imfoot{color:var(--faint);font-size:12.5px;border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.imdaily{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+button.chipb{min-height:34px;padding:4px 13px;border-radius:17px;font-size:13px;font-weight:500;border:1px solid var(--line2);background:none;color:var(--dim)}
+button.chipb.on{background:var(--goldbg);color:var(--gold);border-color:var(--gold)}
+.imarea{border-top:1px solid var(--line)}.card>h2+.imarea{border-top:0}
+.imarea>summary{display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer;list-style:none}.imarea>summary::-webkit-details-marker{display:none}
+.imarea .n{flex:0 0 38%;font-weight:600;font-size:14.5px}.imarea .imbar{flex:1;height:6px;background:#262C34;border-radius:3px;overflow:hidden;display:block}.imarea .imbar i{display:block;height:100%;background:var(--gold)}
+.imarea .p{flex:0 0 36px;text-align:right;color:var(--dim);font-size:12.5px}.imarea[open]>summary .n{color:var(--gold)}
+#iron details.fold h3{margin:16px 0 6px;font-size:14px}
+/* Overview: only cards with something to act on */
+#cards .card:has(> h2 > button[data-go]):not(:has(.big,.good)){display:none}
+#cards .card>h2{font-size:16px}#cards .card>h2 button{min-height:32px;padding:2px 12px;font-size:13px}
+.imdaily{margin-top:14px}.card.imnow{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -1686,7 +1711,7 @@ const IM_MONEY=[['Experiments','~300k a day','Enchanting 10+, three a day, free'
 // long grinds: chip at these in a session; everything else can be finished in one sitting
 const IM_GRIND=new Set(['m12','ench10','alch10','hotm3','hotm4','comp','d226','pigeon','yog','tdrill','c15','mastiff','sa','giant','gdrag','term','melon','cropie','ferm','fig','helix','bayou','rod','shark','golem']);
 const IM_TIMERS=[['Forge','Fill every forge slot before you log off (drill parts, refined mithril, gemstones).'],['Minions and composter','Empty the minions, refuel and top up the composter so they run while you\'re on your main.'],['Pet upgrades at Kat','Start a pet upgrade (Mithril Golem, Silverfish); it finishes while you\'re away.'],['Profile upgrades','Keep the minion slot upgrade running at Elizabeth.']];
-const IM_DAILY=[['exp','Experiments (3 free)'],['rift','Rift: free transfusions (1 every 4 hours, 3 a day)'],['cake','Eat your island cakes'],['forge','Forge full'],['minion','Empty minions, refuel the composter'],['dwarf','Dwarven Mines events you catch'],['contest','A few Galatea or Jacob\'s contests']];
+const IM_DAILY=[['exp','Experiments'],['rift','Rift'],['cake','Cakes'],['forge','Forge'],['minion','Minions'],['dwarf','Mine events'],['contest','Contests']];
 function imMinions(m){const cg=(m.player_data&&m.player_data.crafted_generators)||[],tiers={};
   for(const g of cg){const z=g.match(/^(.*)_(\d+)$/);if(z)(tiers[z[1]]=tiers[z[1]]||new Set()).add(+z[2])}
   const uniq=cg.length;let slots=5,next=null;for(const [u,s] of IM_SLOTS){if(uniq>=u)slots=s;else{next={u,s};break}}
@@ -1700,37 +1725,35 @@ function renderIron(){const el=$('ironBody');if(!el)return;const inp=$('imIgn');
   if(!IMEM){el.innerHTML=`<p class="note">${esc(IMERR||(getKey()?'Loading your Ironman profile with your main one…':'Paste your API key in Settings. Your Ironman profile then loads with your main one and stays up to date.'))}</p>`;return}
   const _open=[...el.querySelectorAll('details')].map(d=>d.open),_y=window.scrollY;
   const m=IMEM,c=imCtx(m),mi=imMinions(m),purse=(m.currencies&&m.currencies.coin_purse)||0,bank=IPROF.banking&&IPROF.banking.balance;
-  const tile=(k,v,s)=>`<div class="kpi"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></div>`;
-  const sk=['combat','mining','farming','foraging','fishing','enchanting','alchemy','taming'].map(s=>c.sk(s)||0),avg=sk.reduce((a,b)=>a+b,0)/sk.length;
-  let h=`<div class="kpis">${tile('Profile',esc(IPROF.cute_name||'?'),`SkyBlock level ${c.sbl}`)}${tile('Coins',fmt(purse),bank!=null?`plus ${fmt(bank)} in the bank`:'bank not shared')}${tile('Skill average',avg.toFixed(1),`Mining ${c.sk('mining')||0}, Combat ${c.sk('combat')||0}`)}${tile('Catacombs',c.cata.toFixed(1),`HOTM ${c.hotm||0}`)}${tile('Minion slots',mi.slots,mi.next?`${mi.next.u-mi.uniq} more unique tiers for slot ${mi.next.s}`:`${mi.uniq} unique tiers`)}${tile('Magical Power',c.mp||'?','highest reached')}</div>`;
-  {const t=imTimers(m);if(t)h+=`<p class="note">${t}</p>`}
-  if(IMITEMS&&!IMITEMS.api)h+=`<p class="note">Your Ironman's inventory API is off, so gear steps can't be checked. Turn it on in SkyBlock settings (API settings) or tick them by hand.</p>`;
-  // next steps: first unfinished step of each track, in track priority
-  // balance: least-finished areas first, so every part of the game keeps moving instead of one skill running ahead
-  const prog=IM_TRACKS.map(([tk,tn,steps])=>{const st=steps.map(s=>imStepState(c,s));return {tk,tn,steps,st,pct:st.filter(x=>x==='done').length/steps.length}});
-  const next=[];for(const t of [...prog].sort((a,b)=>a.pct-b.pct)){const s=t.steps.find(s=>imStepState(c,s)==='todo')||t.steps.find(s=>imStepState(c,s)==='unk');if(s)next.push([t.tn,s,imStepState(c,s)])}
-  h+=`<div class="card"><h2>Balance</h2>${[...prog].sort((a,b)=>a.pct-b.pct).map(t=>`<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="width:150px">${esc(t.tn.split(' (')[0])}</span><span style="flex:1;height:10px;background:var(--line,#262C34);border-radius:5px;overflow:hidden"><span style="display:block;height:100%;width:${Math.round(t.pct*100)}%;background:var(--accent,#FFB62E)"></span></span><span class="dim" style="width:42px;text-align:right">${Math.round(t.pct*100)}%</span></div>`).join('')}</div>`;
-  const stepLi=(s,st,tag)=>`<li><div><div class="tt">${tag?`<span class="tag">${esc(tag)}</span>`:''}${st==='done'?'<span class="good">✓</span> ':''}${esc(s[1])}</div><div class="dd">${esc(s[2])}${st==='unk'?' <span class="dim">(can\'t check this from the API)</span>':''}</div></div><div class="mc"><button data-imk="${s[0]}" style="padding:2px 8px;font-size:12px">${(S.imDone||{})[s[0]]?'Undo':'Done'}</button></div></li>`;
-  // quick session: start the timers, then the next step you can finish in one sitting, then one grind to chip at
-  {const quick=next.filter(([tn,s])=>!IM_GRIND.has(s[0])),grind=next.filter(([tn,s])=>IM_GRIND.has(s[0]));
-   const pick=[...quick.slice(0,2),...grind.slice(0,1)];
-   h+=`<div class="card"><h2>Quick session</h2><ol class="steps"><li><div><div class="tt"><span class="tag">Timers</span>Start what runs offline</div><div class="dd">Fill the forge. Empty minions and refuel the composter. Start a pet upgrade at Kat. Keep a profile upgrade running at Elizabeth.</div></div></li>${pick.map(([tn,s,st])=>stepLi(s,st,IM_GRIND.has(s[0])?'30 min on':tn.split(' (')[0])).join('')}<li><div><div class="tt"><span class="tag">Daily</span>Experiments, if you haven't today</div><div class="dd">Three free a day.</div></div></li></ol></div>`}
-  h+=`<details class="fold"><summary>Next step in every area</summary><ol class="steps">${next.map(([tn,s,st])=>stepLi(s,st,tn.split(' (')[0])).join('')}</ol></details>`;
-  const dd=imDay();h+=`<div class="card"><h2>Ironman dailies</h2><div>${IM_DAILY.map(([k,n])=>`<label style="display:block;margin:4px 0"><input type="checkbox" data-imday="${k}"${dd.d[k]?' checked':''}> ${esc(n)}</label>`).join('')}</div></div>`;
-  h+=`<details class="fold" open><summary>Money methods for where you are</summary><div class="wrap"><table><tr><th>Method</th><th>Rate</th><th>Needs</th><th>You</th></tr>${IM_MONEY.map(([n,r,w,f])=>{let ok=null;try{ok=f(c)}catch(e){}return `<tr><td><b>${esc(n)}</b></td><td>${esc(r)}</td><td>${esc(w)}</td><td>${ok===true?'<span class="good">Ready</span>':ok===false?'<span class="dim">Not yet</span>':'<span class="dim">Check</span>'}</td></tr>`}).join('')}</table></div><p class="note">Rates are what guide makers reported in 2026 videos, not measured on your profile. Minions are for materials and sacks on Ironman, not coins.</p></details>`;
-  for(const [tk,tn,steps] of IM_TRACKS){const st=steps.map(s=>imStepState(c,s)),done=st.filter(x=>x==='done').length;
-    h+=`<details class="fold"><summary>${esc(tn)} <span class="dim">${done} of ${steps.length}</span></summary><ol class="steps">${steps.map((s,i)=>stepLi(s,st[i])).join('')}</ol></details>`}
+  const chip=(k,v)=>`<div class="imchip"><b>${v}</b><span>${k}</span></div>`,AREA={start:'Basics',mining:'Mining',combat:'Combat',farming:'Farming',foraging:'Foraging',fishing:'Fishing',acc:'Accessories'};
+  {const r=$('imIgn');if(r&&r.parentElement)r.parentElement.style.display='none'}
+  let h=`<div class="imhead"><div class="imname">${esc(IPROF.cute_name||'?')}<span>Ironman, level ${c.sbl}</span></div><div class="imchips">${chip('coins',fmt(purse))}${chip('Magic Power',c.mp||'?')}${chip('Catacombs',Math.floor(c.cata))}${chip('minion slots',mi.slots)}</div></div>`;
+  if(IMITEMS&&!IMITEMS.api)h+=`<p class="note"><span class="warn">Inventory API is off on this profile, so gear steps can't tick themselves.</span></p>`;
+  const row=(s,st,tag)=>`<div class="imr${st==='done'?' done':''}"><button class="imc" data-imk="${s[0]}" aria-label="Mark done">${st==='done'?'✓':''}</button><div class="imt"><div class="tt">${esc(s[1])}</div><div class="dd">${esc(s[2])}</div></div>${tag?`<span class="tag">${esc(tag)}</span>`:''}</div>`;
+  // least-finished areas first, so every part of the game keeps moving
+  const prog=IM_TRACKS.map(([tk,tn,steps])=>{const st=steps.map(s=>imStepState(c,s));return {tk,name:AREA[tk]||tn,steps,st,pct:st.filter(x=>x==='done').length/steps.length}}).sort((a,b)=>a.pct-b.pct);
+  const next=[];for(const t of prog){const k=t.steps.findIndex((s,i)=>t.st[i]==='todo'),k2=k>=0?k:t.steps.findIndex((s,i)=>t.st[i]==='unk');if(k2>=0)next.push([t.name,t.steps[k2],t.st[k2]])}
+  const quick=next.filter(([n,s])=>!IM_GRIND.has(s[0])),grind=next.filter(([n,s])=>IM_GRIND.has(s[0])),pick=[...quick.slice(0,2).map(x=>[x[1],x[2],x[0]]),...grind.slice(0,1).map(x=>[x[1],x[2],'30 min'])];
+  if(mi.next&&mi.next.u-mi.uniq<=3){const n=mi.next.u-mi.uniq;pick.unshift([['minslot',`Craft ${n} new minion tier${n>1?'s':''} for slot ${mi.next.s}`,'The cheapest ones are listed under More.',null],'todo','Minions'])}
+  const tm=imTimers(m).split(' &nbsp;·&nbsp; ').filter(x=>/warn/.test(x));
+  h+=`<div class="card imnow"><h2>Do now</h2>${pick.slice(0,4).map(([s,st,tag])=>row(s,st,tag)).join('')}<div class="imfoot">${tm.length?tm.join(', '):'Before you log off: fill the forge, empty minions, start a pet upgrade.'}</div></div>`;
+  const dd=imDay();h+=`<div class="imdaily">${IM_DAILY.map(([k,n])=>`<button class="chipb${dd.d[k]?' on':''}" data-imday="${k}">${esc(n)}</button>`).join('')}</div>`;
+  h+=`<div class="card"><h2>Areas</h2>${prog.map(t=>`<details class="imarea"><summary><span class="n">${esc(t.name)}</span><span class="imbar"><i style="width:${Math.round(t.pct*100)}%"></i></span><span class="p">${Math.round(t.pct*100)}%</span></summary>${t.steps.map((s,i)=>row(s,t.st[i])).join('')}</details>`).join('')}</div>`;
   const tc=i=>c.floor(i);
-  h+=`<details class="fold"><summary>Dungeon floors and slayers</summary><div class="wrap"><table><tr><th>Floor</th><th>Runs</th><th>Run it for</th></tr>${IM_FLOORS.map(([f,w])=>`<tr><td>F${f}</td><td>${tc(f).toLocaleString()}</td><td>${esc(w)}</td></tr>`).join('')}</table></div><div class="wrap"><table><tr><th>Slayer</th><th>Level</th><th>Aim for</th></tr>${IM_SLAY.map(([k,n,lv,w])=>`<tr><td>${esc(n)}</td><td>${c.slay(k)}</td><td>${c.slay(k)>=lv?'<span class="good">✓</span> ':''}Level ${lv}: ${esc(w)}</td></tr>`).join('')}</table></div></details>`;
-  h+=`<details class="fold"><summary>Minions to craft for more slots</summary><p class="note">Every new tier counts as a unique. Good starter set: cow (leather for sacks), zombie and spider (combat sack), chicken (enchanted eggs for pets), two fishing, then aim for 12 to 14 slots. Cheapest tiers you can craft now are first.</p><div class="wrap"><table id="imCraft"></table></div></details>`;
-  h+=`<details class="fold"><summary>Notes on old or changing advice</summary><p class="note">Spirit Mask now drops in Master Mode Floor 4, so older "free Spirit Mask from Bonzo" advice is out of date. Special-rarity accessories give no Magical Power since the Nov 17 update. Farming was reworked with the Greenhouse; older "farming is getting nerfed" warnings came before that. Start big grinds when a good mayor is in: Cole (Mining Fiesta, refined minerals), Jerry, Diana, or a 2x XP event.</p></details>`;
+  h+=`<details class="fold"><summary>More</summary>
+<h3>Money methods</h3><div class="wrap"><table><tr><th>Method</th><th>Rate</th><th>You</th></tr>${IM_MONEY.map(([n,r,w,f])=>{let ok=null;try{ok=f(c)}catch(e){}return `<tr><td><b>${esc(n)}</b><span class="sub">${esc(w)}</span></td><td>${esc(r)}</td><td>${ok===true?'<span class="good">Ready</span>':ok===false?'<span class="dim">Not yet</span>':'<span class="dim">Check</span>'}</td></tr>`}).join('')}</table></div>
+<h3>Dungeon floors</h3><div class="wrap"><table><tr><th>Floor</th><th>Runs</th><th>Run it for</th></tr>${IM_FLOORS.map(([f,w])=>`<tr><td>F${f}</td><td>${tc(f).toLocaleString()}</td><td>${esc(w)}</td></tr>`).join('')}</table></div>
+<h3>Slayers</h3><div class="wrap"><table><tr><th>Slayer</th><th>Level</th><th>Aim for</th></tr>${IM_SLAY.map(([k,n,lv,w])=>`<tr><td>${esc(n)}</td><td>${c.slay(k)}</td><td>${c.slay(k)>=lv?'<span class="good">✓</span> ':''}Level ${lv}<span class="sub">${esc(w)}</span></td></tr>`).join('')}</table></div>
+<h3>Minions to craft for slots</h3><div class="wrap"><table id="imCraft"></table></div>
+<h3>Changed advice</h3><p class="note">Spirit Mask now drops in Master Mode Floor 4. Special accessories give no Magical Power since Nov 17. Farming was reworked with the Greenhouse, so older nerf warnings are out of date. Start big grinds under a good mayor (Cole, Jerry, Diana).</p></details>`;
   el.innerHTML=h;
   {const ds=el.querySelectorAll('details');if(_open.length===ds.length)ds.forEach((d,i)=>d.open=_open[i]);if($('iron')&&!$('iron').hidden&&S.tab==='iron')window.scrollTo(0,_y)}
   table($('imCraft'),[{key:'name',label:'Craft',val:r=>r.v,html:r=>`${ic(r.t+'_GENERATOR_'+r.n)}<b>${esc(r.name)}</b><span class="sub">${r.prev?'You have the tier below.':'Craft the tier below first.'}</span>`},
     {key:'rec',label:'Parts',val:r=>r.v,html:r=>Object.keys(r.rec).length?Object.entries(r.rec).map(([i,n])=>`${n}× ${esc(pretty(i))}`).join(', '):'<span class="dim">Base materials (tier I)</span>'},
     {key:'v',label:'Parts worth',val:r=>r.v,html:r=>r.v?fmt(r.v):'?',tip:'What the parts would sell for to an NPC'}],mi.opts.slice(0,30),'v','You have crafted every minion tier this page knows.');
-  for(const b of el.querySelectorAll('button[data-imk]'))b.onclick=()=>imToggle(b.dataset.imk);
-  for(const x of el.querySelectorAll('input[data-imday]'))x.onchange=()=>{const d=imDay();if(x.checked)d.d[x.dataset.imday]=1;else delete d.d[x.dataset.imday];save()}}
+  for(const b of el.querySelectorAll('button[data-imk]'))b.onclick=e=>{e.stopPropagation();imToggle(b.dataset.imk)};
+  for(const t of el.querySelectorAll('.imt'))t.onclick=()=>t.parentElement.classList.toggle('open');
+  for(const x of el.querySelectorAll('button[data-imday]'))x.onclick=()=>{const d=imDay(),k=x.dataset.imday;if(d.d[k])delete d.d[k];else d.d[k]=1;save();x.classList.toggle('on')}}
 function ironInit(){const b=$('imLoad'),i=$('imIgn');if(!b||b._w)return;b._w=1;b.onclick=()=>{S.imIgn=(i.value||'').trim();save();IMEM=null;loadIron()};i.onkeydown=e=>{if(e.key==='Enter')b.onclick()};if(S.imIgn&&S.imUuid&&S.imUuid!==S.uuid&&!IMEM)loadIron();else{renderIron();imSync()}}
 
 /* ---------- main account: is foraging worth more than your current rate? ---------- */
